@@ -1,0 +1,27 @@
+# altium designer
+*/History/
+*/Project Logs for Project-ThermalType-STM32/
+
+# vscode
+
+# mdk
+*.dbgconf
+*.axf
+*.build_log.htm
+*.crf
+*.d
+*.dep
+*.htm
+*.icf
+*.lnp
+*.lst
+*.map
+*.o
+*.sct
+*.uvguix.*
+*.scvd
+*/MDK-ARM/DebugConfig/
+*/MDK-ARM/RTE/
+
+# ctags
+tags
