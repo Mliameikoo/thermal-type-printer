@@ -1,6 +1,7 @@
 # altium designer
-*/History/
-*/Project Logs for Project-ThermalType-STM32/
+*/History/*
+*/Project Logs for Project-ThermalType-STM32/*
+*/__Previews/*
 
 # vscode
 
@@ -20,8 +21,8 @@
 *.sct
 *.uvguix.*
 *.scvd
-*/MDK-ARM/DebugConfig/
-*/MDK-ARM/RTE/
+*/MDK-ARM/DebugConfig/*
+*/MDK-ARM/RTE/*
 
 # ctags
 tags
