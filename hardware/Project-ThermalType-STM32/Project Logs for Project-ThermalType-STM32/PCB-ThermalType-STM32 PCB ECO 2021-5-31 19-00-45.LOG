@@ -1,0 +1,5 @@
+Added Component: Designator=S1(²¦¶¯¿ª¹ØSS-12D)
+Added Pin To Net: NetName=NetDCIN1_1 Pin=S1-2
+Added Pin To Net: NetName=POWERIN_5V Pin=S1-3
+Added Member To Class: ClassName=Sheet-ThermalType-STM32 Member=Component S1 BUTTON_POW
+Added Room: Name=Sheet-ThermalType-STM32

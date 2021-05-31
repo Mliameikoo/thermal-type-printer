@@ -1,0 +1,5 @@
+Removed Pin From Net: NetName=GND Pin=LED2-2
+Removed Pin From Net: NetName=VCC3V3 Pin=R12-1
+Removed Member From Class: ClassName=Sheet-ThermalType-STM32 Member=LED2
+Removed Member From Class: ClassName=Sheet-ThermalType-STM32 Member=R12
+Added Member To Class: ClassName=Sheet-ThermalType-STM32 Member=Component R11 1K

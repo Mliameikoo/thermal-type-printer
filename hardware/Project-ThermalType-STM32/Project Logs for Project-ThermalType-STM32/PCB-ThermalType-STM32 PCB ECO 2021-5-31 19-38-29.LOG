@@ -1,0 +1,17 @@
+Removed Pin From Net: NetName=GND Pin=R11-1
+Removed Pin From Net: NetName=GND Pin=R11-2
+Removed Pin From Net: NetName=GND Pin=R11-3
+Removed Pin From Net: NetName=GND Pin=R11-4
+Removed Pin From Net: NetName=MCU-PWM0 Pin=R11-5
+Removed Pin From Net: NetName=MCU-PWM1 Pin=R11-6
+Removed Pin From Net: NetName=MCU-PWM2 Pin=R11-7
+Removed Pin From Net: NetName=MCU-PWM3 Pin=R11-8
+Added Component: Designator=R11(0603RES)
+Added Pin To Net: NetName=GND Pin=R11-1
+Added Pin To Net: NetName=GND Pin=R11-2
+Added Pin To Net: NetName=GND Pin=R11-3
+Added Pin To Net: NetName=GND Pin=R11-4
+Added Pin To Net: NetName=MCU-PWM3 Pin=R11-5
+Added Pin To Net: NetName=MCU-PWM2 Pin=R11-6
+Added Pin To Net: NetName=MCU-PWM1 Pin=R11-7
+Added Pin To Net: NetName=MCU-PWM0 Pin=R11-8

@@ -1,0 +1,5 @@
+Removed Pin From Net: NetName=NRST Pin=K1-1
+Removed Pin From Net: NetName=NRST Pin=K1-1
+Removed Pin From Net: NetName=GND Pin=K1-2
+Removed Pin From Net: NetName=GND Pin=K1-2
+Removed Member From Class: ClassName=Sheet-ThermalType-STM32 Member=K1
