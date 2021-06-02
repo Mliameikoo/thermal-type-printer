@@ -1,8 +1,13 @@
 # altium designer
-*/History/*
-*/Project Logs for Project-ThermalType-STM32/*
-*/__Previews/*
+**/History/
+**/__Previews/
+*.htm
+*.LOG
+*.OutJob
+*.REP
 
+*.rar
+*.zip
 # vscode
 
 # mdk
