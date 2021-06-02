@@ -55,22 +55,22 @@ UART_HandleTypeDef huart3;
 osThreadId_t peripheralTaskHandle;
 const osThreadAttr_t peripheralTask_attributes = {
   .name = "peripheralTask",
+  .stack_size = 64 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
-  .stack_size = 64 * 4
 };
 /* Definitions for usblinkTxTask */
 osThreadId_t usblinkTxTaskHandle;
 const osThreadAttr_t usblinkTxTask_attributes = {
   .name = "usblinkTxTask",
+  .stack_size = 64 * 4,
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 64 * 4
 };
 /* Definitions for usblinkRxTask */
 osThreadId_t usblinkRxTaskHandle;
 const osThreadAttr_t usblinkRxTask_attributes = {
   .name = "usblinkRxTask",
+  .stack_size = 64 * 4,
   .priority = (osPriority_t) osPriorityLow,
-  .stack_size = 64 * 4
 };
 /* USER CODE BEGIN PV */
 
@@ -167,6 +167,10 @@ int main(void)
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
   /* Start scheduler */
   osKernelStart();
 
@@ -262,7 +266,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_239CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -429,11 +433,39 @@ static void MX_USART3_UART_Init(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, PRN_STROBE_Pin|PRN_LATCH_Pin|USER_LED_Pin|PRN_POWER_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, USER_LED_B_Pin|USER_LED_G_Pin|USER_LED_R_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin : PAPER_SNS_Pin */
+  GPIO_InitStruct.Pin = PAPER_SNS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(PAPER_SNS_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PRN_STROBE_Pin PRN_LATCH_Pin USER_LED_Pin USER_LED_B_Pin
+                           USER_LED_G_Pin USER_LED_R_Pin PRN_POWER_Pin */
+  GPIO_InitStruct.Pin = PRN_STROBE_Pin|PRN_LATCH_Pin|USER_LED_Pin|USER_LED_B_Pin
+                          |USER_LED_G_Pin|USER_LED_R_Pin|PRN_POWER_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : USER_KEY1_Pin USER_KEY2_Pin */
+  GPIO_InitStruct.Pin = USER_KEY1_Pin|USER_KEY2_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
@@ -497,7 +529,7 @@ void usblinkRxStartTask(void *argument)
   /* USER CODE END usblinkRxStartTask */
 }
 
-/**
+ /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM1 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment

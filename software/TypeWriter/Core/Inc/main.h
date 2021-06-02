@@ -58,6 +58,26 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define PAPER_SNS_Pin GPIO_PIN_6
+#define PAPER_SNS_GPIO_Port GPIOA
+#define PRN_STROBE_Pin GPIO_PIN_0
+#define PRN_STROBE_GPIO_Port GPIOB
+#define PRN_LATCH_Pin GPIO_PIN_1
+#define PRN_LATCH_GPIO_Port GPIOB
+#define USER_LED_Pin GPIO_PIN_2
+#define USER_LED_GPIO_Port GPIOB
+#define USER_LED_B_Pin GPIO_PIN_12
+#define USER_LED_B_GPIO_Port GPIOB
+#define USER_LED_G_Pin GPIO_PIN_13
+#define USER_LED_G_GPIO_Port GPIOB
+#define USER_LED_R_Pin GPIO_PIN_14
+#define USER_LED_R_GPIO_Port GPIOB
+#define PRN_POWER_Pin GPIO_PIN_4
+#define PRN_POWER_GPIO_Port GPIOB
+#define USER_KEY1_Pin GPIO_PIN_5
+#define USER_KEY1_GPIO_Port GPIOB
+#define USER_KEY2_Pin GPIO_PIN_6
+#define USER_KEY2_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
