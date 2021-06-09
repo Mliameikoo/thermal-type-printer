@@ -22,10 +22,12 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "user_app.h"
+#include "queue.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,11 +49,198 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
+/* Definitions for peripheralTask */
+osThreadId_t peripheralTaskHandle;
+const osThreadAttr_t peripheralTask_attributes = {
+  .name = "peripheralTask",
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
+/* Definitions for usblinkTxTask */
+osThreadId_t usblinkTxTaskHandle;
+const osThreadAttr_t usblinkTxTask_attributes = {
+  .name = "usblinkTxTask",
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for usblinkRxTask */
+osThreadId_t usblinkRxTaskHandle;
+const osThreadAttr_t usblinkRxTask_attributes = {
+  .name = "usblinkRxTask",
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for inoutDeviceTask */
+osThreadId_t inoutDeviceTaskHandle;
+const osThreadAttr_t inoutDeviceTask_attributes = {
+  .name = "inoutDeviceTask",
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for usblinkSendQueue */
+osMessageQueueId_t usblinkSendQueueHandle;
+const osMessageQueueAttr_t usblinkSendQueue_attributes = {
+  .name = "usblinkSendQueue"
+};
+/* Definitions for usblinkRecEvent */
+osEventFlagsId_t usblinkRecEventHandle;
+const osEventFlagsAttr_t usblinkRecEvent_attributes = {
+  .name = "usblinkRecEvent"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
+
+void peripheralStartTask(void *argument);
+void usblinkTxStartTask(void *argument);
+void usblinkRxStartTask(void *argument);
+void inoutDeviceStartTask(void *argument);
+
+extern void MX_USB_DEVICE_Init(void);
+void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
+
+/**
+  * @brief  FreeRTOS initialization
+  * @param  None
+  * @retval None
+  */
+void MX_FREERTOS_Init(void) {
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* Create the queue(s) */
+  /* creation of usblinkSendQueue */
+  usblinkSendQueueHandle = osMessageQueueNew (5, sizeof(struct usblinkMessageFormatDef), &usblinkSendQueue_attributes);
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of peripheralTask */
+  peripheralTaskHandle = osThreadNew(peripheralStartTask, NULL, &peripheralTask_attributes);
+
+  /* creation of usblinkTxTask */
+  usblinkTxTaskHandle = osThreadNew(usblinkTxStartTask, NULL, &usblinkTxTask_attributes);
+
+  /* creation of usblinkRxTask */
+  usblinkRxTaskHandle = osThreadNew(usblinkRxStartTask, NULL, &usblinkRxTask_attributes);
+
+  /* creation of inoutDeviceTask */
+  inoutDeviceTaskHandle = osThreadNew(inoutDeviceStartTask, NULL, &inoutDeviceTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* Create the event(s) */
+  /* creation of usblinkRecEvent */
+  usblinkRecEventHandle = osEventFlagsNew(&usblinkRecEvent_attributes);
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
+}
+
+/* USER CODE BEGIN Header_peripheralStartTask */
+/**
+  * @brief  Function implementing the peripheralTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_peripheralStartTask */
+void peripheralStartTask(void *argument)
+{
+  /* init code for USB_DEVICE */
+  MX_USB_DEVICE_Init();
+  /* USER CODE BEGIN peripheralStartTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END peripheralStartTask */
+}
+
+/* USER CODE BEGIN Header_usblinkTxStartTask */
+/**
+* @brief Function implementing the usblinkTxTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_usblinkTxStartTask */
+void usblinkTxStartTask(void *argument)
+{
+  /* USER CODE BEGIN usblinkTxStartTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    struct usblinkMessageFormatDef usblinkMessage;
+    if(xQueueReceive(usblinkSendQueueHandle, &usblinkMessage, 1) == pdTRUE){
+      CDC_Transmit_FS(usblinkMessage.info, usblinkMessage.info_length);
+    }
+    osDelay(1);
+  }
+  /* USER CODE END usblinkTxStartTask */
+}
+
+/* USER CODE BEGIN Header_usblinkRxStartTask */
+/**
+* @brief Function implementing the usblinkRxTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_usblinkRxStartTask */
+void usblinkRxStartTask(void *argument)
+{
+  /* USER CODE BEGIN usblinkRxStartTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END usblinkRxStartTask */
+}
+
+/* USER CODE BEGIN Header_inoutDeviceStartTask */
+/**
+* @brief Function implementing the inoutDeviceTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_inoutDeviceStartTask */
+void inoutDeviceStartTask(void *argument)
+{
+  /* USER CODE BEGIN inoutDeviceStartTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    KEY_PinState val;
+    val = key_scan_signal(0, HAL_GPIO_ReadPin(USER_KEY1_GPIO_Port, USER_KEY1_Pin));
+    if(val == KEY_SIGNAL_RELEASE){
+      HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
+      usb_printf("hello\r\n");
+    }
+    osDelay(5);
+  }
+  /* USER CODE END inoutDeviceStartTask */
+}
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */

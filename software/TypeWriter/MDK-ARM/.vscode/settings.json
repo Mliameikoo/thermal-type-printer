@@ -18,10 +18,14 @@
         }
     ],
     "files.associations": {
+        "user_app.h": "c",
+        "usbd_cdc_if.h": "c",
+        "cstdio": "cpp",
+        "cmsis_os.h": "c",
         "main.h": "c",
-        "stm32f1xx_hal.h": "c",
-        "SYS_INT.C": "cpp",
+        "freertos.h": "c",
+        "task.h": "c",
         "bsp_led.h": "c",
-        "user_app.h": "c"
+        "bsp_key.h": "c"
     }
 }
