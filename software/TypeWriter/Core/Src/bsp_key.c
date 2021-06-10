@@ -1,3 +1,20 @@
+/**
+  ******************************************************************************
+  * File Name          : bsp_key.c
+  * Description        : Code for button driver
+  * Author             : Jadechen
+  ******************************************************************************
+  * @attention
+  *
+  * The button driver uses non-blocking signal reading, no delay function is 
+  * required, and only needs to be called cyclically in a fixed cycle. The 
+  * driver realizes signal detection such as long press, short press, press 
+  * and release of the button. The main function is <key_scan_signal>, 
+  * which returns the key edge signal and updates the 
+  * <struct keyPressDef keyPress> parameter. 
+  *
+  ******************************************************************************
+  */
 /* Includes ------------------------------------------------------------------*/
 #include "bsp_key.h"
 /* Private define ------------------------------------------------------------*/
@@ -24,7 +41,7 @@ KEY_PinState key_scan_signal(uint8_t ch, uint8_t current_value){
         // press not valid yet
         if( KEY_VALID_LEVEL?(current_value):(!current_value) ){
             if(record_elishaking_time[ch] >= KEY_PRESS_ELiSHAKING_NUMS){
-                keyPress.valid[ch] = true;
+                keyPress.valid[ch] = true; // update valid singal
                 record_elishaking_time[ch] = 0; // ready for release elishake
                 retval = KEY_SIGNAL_PRESS;
             }
@@ -43,7 +60,7 @@ KEY_PinState key_scan_signal(uint8_t ch, uint8_t current_value){
         }
         else{
             if(record_elishaking_time[ch] >= KEY_PRESS_ELiSHAKING_NUMS){
-                keyPress.valid[ch] = false;
+                keyPress.valid[ch] = false; // update valid singal
                 record_elishaking_time[ch] = 0; // ready for press elishake
                 retval = KEY_SIGNAL_RELEASE;
             }
@@ -54,3 +71,4 @@ KEY_PinState key_scan_signal(uint8_t ch, uint8_t current_value){
     }
     return retval;
 }
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -170,6 +170,7 @@ void peripheralStartTask(void *argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN peripheralStartTask */
+  printer_init();
   /* Infinite loop */
   for(;;)
   {
@@ -187,16 +188,17 @@ void peripheralStartTask(void *argument)
 /* USER CODE END Header_usblinkTxStartTask */
 void usblinkTxStartTask(void *argument)
 {
-  /* USER CODE BEGIN usblinkTxStartTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    struct usblinkMessageFormatDef usblinkMessage;
-    if(xQueueReceive(usblinkSendQueueHandle, &usblinkMessage, 1) == pdTRUE){
-      CDC_Transmit_FS(usblinkMessage.info, usblinkMessage.info_length);
-    }
-    osDelay(1);
-  }
+	/* USER CODE BEGIN usblinkTxStartTask */
+	while(!isSysInitOver);
+	/* Infinite loop */
+	for(;;)
+	{
+		struct usblinkMessageFormatDef usblinkMessage;
+		if(xQueueReceive(usblinkSendQueueHandle, &usblinkMessage, 1) == pdTRUE){
+			CDC_Transmit_FS(usblinkMessage.info, usblinkMessage.info_length);
+		}
+		osDelay(1);
+	}
   /* USER CODE END usblinkTxStartTask */
 }
 
@@ -227,19 +229,30 @@ void usblinkRxStartTask(void *argument)
 /* USER CODE END Header_inoutDeviceStartTask */
 void inoutDeviceStartTask(void *argument)
 {
-  /* USER CODE BEGIN inoutDeviceStartTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    KEY_PinState val;
-    val = key_scan_signal(0, HAL_GPIO_ReadPin(USER_KEY1_GPIO_Port, USER_KEY1_Pin));
-    if(val == KEY_SIGNAL_RELEASE){
-      HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
-      usb_printf("hello\r\n");
+	/* USER CODE BEGIN inoutDeviceStartTask */
+	while(!isSysInitOver);
+
+	/* Infinite loop */
+	for(;;)
+	{
+		KEY_PinState val;
+		val = key_scan_signal(0, HAL_GPIO_ReadPin(USER_KEY1_GPIO_Port, USER_KEY1_Pin));
+		if(val == KEY_SIGNAL_RELEASE){
+			HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
+			HAL_GPIO_TogglePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin);
+			usb_printf("hello\r\n");
+		}
+		val = key_scan_signal(1, HAL_GPIO_ReadPin(USER_KEY2_GPIO_Port, USER_KEY2_Pin));
+		// if(val == KEY_SIGNAL_RELEASE){
+		// 	printerInfo.cnt = 200;
+		// }
+    if(keyPress.valid[1]){
+      if(!printerInfo.cnt)
+        printerInfo.cnt = 4;
     }
-    osDelay(5);
-  }
-  /* USER CODE END inoutDeviceStartTask */
+		osDelay(5);
+	}
+	/* USER CODE END inoutDeviceStartTask */
 }
 
 /* Private application code --------------------------------------------------*/

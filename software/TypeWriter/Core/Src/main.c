@@ -184,13 +184,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
 
+  static uint8_t _500us_tick = 0;
+
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM1) {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
   if (htim->Instance == TIM4){
+    // 10khz & 100us
     led_shining_loop();
+    if(++_500us_tick > 5){
+      _500us_tick = 0;
+      motor_phases_update_loop();
+    }
   }
   /* USER CODE END Callback 1 */
 }

@@ -11,8 +11,8 @@
 /* Exported functions prototypes ---------------------------------------------*/
 
 /* Private defines -----------------------------------------------------------*/
-#define ADC_RAW_DATA_DEPTH  32      // ADC采样深度
-#define ADC_CHANNEL_NUMS    1       // ADC采样通道数
+// #define ADC_RAW_DATA_DEPTH  32      // ADC采样深度
+// #define ADC_CHANNEL_NUMS    1       // ADC采样通道数
 
 #endif
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

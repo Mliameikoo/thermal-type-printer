@@ -22,6 +22,12 @@
         "stm32f1xx_hal.h": "c",
         "SYS_INT.C": "cpp",
         "bsp_led.h": "c",
-        "user_app.h": "c"
+        "user_app.h": "c",
+        "bsp_thermal_printer.h": "c",
+        "config.h": "c",
+        "bsp_key.h": "c",
+        "freertos.h": "c",
+        "spi.h": "c",
+        "tim.h": "c"
     }
 }

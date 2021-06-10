@@ -1,3 +1,20 @@
+/**
+  ******************************************************************************
+  * File Name          : bsp_key.h
+  * Description        : Header for button driver
+  * Author             : Jadechen
+  ******************************************************************************
+  * @attention
+  *
+  * The button driver uses non-blocking signal reading, no delay function is 
+  * required, and only needs to be called cyclically in a fixed cycle. The 
+  * driver realizes signal detection such as long press, short press, press 
+  * and release of the button. The main function is <key_scan_signal>, 
+  * which returns the key edge signal and updates the 
+  * <struct keyPressDef keyPress> parameter. 
+  *
+  ******************************************************************************
+  */
 #ifndef __BSP_KEY_H
 #define __BSP_KEY_H
 
@@ -23,3 +40,4 @@ extern struct keyPressDef keyPress;
 KEY_PinState key_scan_signal(uint8_t ch, uint8_t current_value);
 
 #endif
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
