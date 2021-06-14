@@ -245,7 +245,7 @@ void inoutDeviceStartTask(void *argument)
 		}
 		val = key_scan_signal(1, HAL_GPIO_ReadPin(USER_KEY2_GPIO_Port, USER_KEY2_Pin));
     if(val == KEY_SIGNAL_RELEASE){
-      uint8_t val = printer_write_text("hello");
+      uint8_t val = printer_write_text("hello world");
       usb_printf("write result: %d\r\n", val);
     }
 		osDelay(5);
