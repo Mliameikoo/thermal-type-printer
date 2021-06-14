@@ -26,6 +26,8 @@
         "freertos.h": "c",
         "task.h": "c",
         "bsp_led.h": "c",
-        "bsp_key.h": "c"
+        "bsp_key.h": "c",
+        "font_thermal_printer.h": "c",
+        "bsp_thermal_printer.h": "c"
     }
 }

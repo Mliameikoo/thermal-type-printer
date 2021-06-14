@@ -15,6 +15,7 @@ struct usblinkMessageFormatDef{
     uint8_t info[USBLINK_MESSAGE_INFO_MAX_LENGTH];
     uint16_t info_length;
 };
+/* Exported variables --------------------------------------------------------*/
 extern uint8_t isSysInitOver;
 /* Exported functions prototypes ---------------------------------------------*/
 
@@ -27,3 +28,4 @@ void step(uint8_t direction);
 void idle(void);
 
 #endif
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

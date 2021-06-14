@@ -28,6 +28,7 @@
 /* USER CODE BEGIN Includes */
 #include "user_app.h"
 #include "queue.h"
+#include "font_thermal_printer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -74,7 +75,7 @@ const osThreadAttr_t usblinkRxTask_attributes = {
 osThreadId_t inoutDeviceTaskHandle;
 const osThreadAttr_t inoutDeviceTask_attributes = {
   .name = "inoutDeviceTask",
-  .stack_size = 64 * 4,
+  .stack_size = 300 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for usblinkSendQueue */
@@ -190,14 +191,13 @@ void usblinkTxStartTask(void *argument)
 {
 	/* USER CODE BEGIN usblinkTxStartTask */
 	while(!isSysInitOver);
+  struct usblinkMessageFormatDef usblinkMessage;
 	/* Infinite loop */
 	for(;;)
 	{
-		struct usblinkMessageFormatDef usblinkMessage;
-		if(xQueueReceive(usblinkSendQueueHandle, &usblinkMessage, 1) == pdTRUE){
+		if(xQueueReceive(usblinkSendQueueHandle, &usblinkMessage, portMAX_DELAY) == pdTRUE){
 			CDC_Transmit_FS(usblinkMessage.info, usblinkMessage.info_length);
 		}
-		osDelay(1);
 	}
   /* USER CODE END usblinkTxStartTask */
 }
@@ -240,15 +240,13 @@ void inoutDeviceStartTask(void *argument)
 		if(val == KEY_SIGNAL_RELEASE){
 			HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
 			HAL_GPIO_TogglePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin);
-			usb_printf("hello\r\n");
+			usb_printf("hello1\r\n");
+//      usb_printf("%d %d", *FONT_CHAR_RASTERS[0], *FONT_CHAR_RASTERS[1]);
 		}
 		val = key_scan_signal(1, HAL_GPIO_ReadPin(USER_KEY2_GPIO_Port, USER_KEY2_Pin));
-		// if(val == KEY_SIGNAL_RELEASE){
-		// 	printerInfo.cnt = 200;
-		// }
-    if(keyPress.valid[1]){
-      if(!printerInfo.cnt)
-        printerInfo.cnt = 4;
+    if(val == KEY_SIGNAL_RELEASE){
+      uint8_t val = printer_write_text("hello");
+      usb_printf("write result: %d\r\n", val);
     }
 		osDelay(5);
 	}

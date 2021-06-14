@@ -18,8 +18,8 @@ uint8_t isSysInitOver = false;
 uint8_t USER_SYS_Init(void){
 	uint8_t retval = 0;
 
-  // reset usb state
-  usb_analog_plug();
+	// reset usb state
+	usb_analog_plug();
 
 	// register shining led
 	led_shining_pin_register(USER_LED_GPIO_Port, USER_LED_Pin, 0);
@@ -90,6 +90,6 @@ void usb_printf_isr(char *fmt, ...){
 	// xQueueSend(usblinkSendQueueHandle, &usblinkMessage, 3);
 }
 
-
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
 
 
