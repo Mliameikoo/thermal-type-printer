@@ -23,7 +23,11 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include <stdbool.h>
+#include <stdarg.h>
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "cmsis_os.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -96,6 +100,9 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
 
+struct usblinkMessageFormatDef usblinkMessage = {0};
+struct hostComProtocolDef hostComProtocol = {0};
+
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**
@@ -110,6 +117,8 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
+
+extern osMessageQueueId_t usblinkRxRequestQueueHandle;
 
 /* USER CODE END EXPORTED_VARIABLES */
 
@@ -154,6 +163,14 @@ static int8_t CDC_Init_FS(void)
   /* Set Application Buffers */
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
+
+  usblinkMessage.tx.info = UserTxBufferFS;
+  usblinkMessage.tx.status_busy = false;
+  usblinkMessage.rx.info = UserRxBufferFS;
+
+  hostComProtocol.head = 0xF5;
+  hostComProtocol.tail = 0x5F;
+
   return (USBD_OK);
   /* USER CODE END 3 */
 }
@@ -179,58 +196,58 @@ static int8_t CDC_DeInit_FS(void)
 static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 {
   /* USER CODE BEGIN 5 */
-  switch(cmd)
+  switch (cmd)
   {
-    case CDC_SEND_ENCAPSULATED_COMMAND:
+  case CDC_SEND_ENCAPSULATED_COMMAND:
 
     break;
 
-    case CDC_GET_ENCAPSULATED_RESPONSE:
+  case CDC_GET_ENCAPSULATED_RESPONSE:
 
     break;
 
-    case CDC_SET_COMM_FEATURE:
+  case CDC_SET_COMM_FEATURE:
 
     break;
 
-    case CDC_GET_COMM_FEATURE:
+  case CDC_GET_COMM_FEATURE:
 
     break;
 
-    case CDC_CLEAR_COMM_FEATURE:
+  case CDC_CLEAR_COMM_FEATURE:
 
     break;
 
-  /*******************************************************************************/
-  /* Line Coding Structure                                                       */
-  /*-----------------------------------------------------------------------------*/
-  /* Offset | Field       | Size | Value  | Description                          */
-  /* 0      | dwDTERate   |   4  | Number |Data terminal rate, in bits per second*/
-  /* 4      | bCharFormat |   1  | Number | Stop bits                            */
-  /*                                        0 - 1 Stop bit                       */
-  /*                                        1 - 1.5 Stop bits                    */
-  /*                                        2 - 2 Stop bits                      */
-  /* 5      | bParityType |  1   | Number | Parity                               */
-  /*                                        0 - None                             */
-  /*                                        1 - Odd                              */
-  /*                                        2 - Even                             */
-  /*                                        3 - Mark                             */
-  /*                                        4 - Space                            */
-  /* 6      | bDataBits  |   1   | Number Data bits (5, 6, 7, 8 or 16).          */
-  /*******************************************************************************/
-    case CDC_SET_LINE_CODING:
+    /*******************************************************************************/
+    /* Line Coding Structure                                                       */
+    /*-----------------------------------------------------------------------------*/
+    /* Offset | Field       | Size | Value  | Description                          */
+    /* 0      | dwDTERate   |   4  | Number |Data terminal rate, in bits per second*/
+    /* 4      | bCharFormat |   1  | Number | Stop bits                            */
+    /*                                        0 - 1 Stop bit                       */
+    /*                                        1 - 1.5 Stop bits                    */
+    /*                                        2 - 2 Stop bits                      */
+    /* 5      | bParityType |  1   | Number | Parity                               */
+    /*                                        0 - None                             */
+    /*                                        1 - Odd                              */
+    /*                                        2 - Even                             */
+    /*                                        3 - Mark                             */
+    /*                                        4 - Space                            */
+    /* 6      | bDataBits  |   1   | Number Data bits (5, 6, 7, 8 or 16).          */
+    /*******************************************************************************/
+  case CDC_SET_LINE_CODING:
 
     break;
 
-    case CDC_GET_LINE_CODING:
+  case CDC_GET_LINE_CODING:
 
     break;
 
-    case CDC_SET_CONTROL_LINE_STATE:
+  case CDC_SET_CONTROL_LINE_STATE:
 
     break;
 
-    case CDC_SEND_BREAK:
+  case CDC_SEND_BREAK:
 
     break;
 
@@ -262,6 +279,39 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   /* USER CODE BEGIN 6 */
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
+
+  uint8_t vaild_length, sum_check;
+
+  if (Buf[0] == hostComProtocol.head && (*Len) > 5 && Buf[(*Len) - 1] == hostComProtocol.tail)
+  {
+    vaild_length = Buf[1];
+    if (*Len == vaild_length + 5)
+    {
+      // check sum
+      sum_check = 0;
+      for (uint8_t i = 2; i < vaild_length + 1 + 2; i++)
+      {
+        sum_check += Buf[i];
+      }
+      if (sum_check == Buf[(*Len) - 2])
+      {
+        // check sum pass
+        // get data
+        usb_printf("receive ok\r\n");
+
+        hostComProtocol.info.command = Buf[2];
+        hostComProtocol.info.valid_length = vaild_length;
+        memcpy(hostComProtocol.info.valid_data, Buf + 3, hostComProtocol.info.valid_length);
+        uint8_t request = 1;
+        portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+        xQueueSendFromISR(usblinkRxRequestQueueHandle, &request, &xHigherPriorityTaskWoken);
+
+        goto TARGET_RECEIVE_OK;
+      }
+    }
+  }
+  usb_printf("receive error\r\n");
+TARGET_RECEIVE_OK:
   return (USBD_OK);
   /* USER CODE END 6 */
 }
@@ -281,8 +331,9 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 7 */
-  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
-  if (hcdc->TxState != 0){
+  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef *)hUsbDeviceFS.pClassData;
+  if (hcdc->TxState != 0)
+  {
     return USBD_BUSY;
   }
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, Buf, Len);
@@ -292,6 +343,19 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
+
+/**
+  * @brief  usb-virtual-com's printf with unblocking
+  * @retval 0: success
+  */
+int8_t usb_printf(char *fmt, ...)
+{
+  va_list argptr;
+  va_start(argptr, fmt);
+  usblinkMessage.tx.length += vsnprintf((char *)(usblinkMessage.tx.info + usblinkMessage.tx.length), APP_TX_DATA_SIZE - usblinkMessage.tx.length, fmt, argptr);
+  va_end(argptr);
+  return 0;
+}
 
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 

@@ -28,6 +28,7 @@
         "bsp_key.h": "c",
         "freertos.h": "c",
         "spi.h": "c",
-        "tim.h": "c"
+        "tim.h": "c",
+        "usbd_cdc_if.h": "c"
     }
 }

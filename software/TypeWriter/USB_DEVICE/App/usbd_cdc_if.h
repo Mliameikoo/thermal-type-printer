@@ -51,8 +51,8 @@
 /* USER CODE BEGIN EXPORTED_DEFINES */
 /* Define size for the receive and transmit buffer over CDC */
 /* It's up to user to redefine and/or remove those define */
-#define APP_RX_DATA_SIZE  1000
-#define APP_TX_DATA_SIZE  1000
+#define APP_RX_DATA_SIZE 200
+#define APP_TX_DATA_SIZE 200
 
 /* USER CODE END EXPORTED_DEFINES */
 
@@ -66,7 +66,33 @@
   */
 
 /* USER CODE BEGIN EXPORTED_TYPES */
+  struct usblinkMessageFormatDef
+  {
+    struct
+    {
+      uint8_t *info;
+      uint16_t length;
+      uint8_t status_busy;
+    } tx;
+    struct
+    {
+      uint8_t *info;
+      uint16_t length;
+    } rx;
+  };
 
+  struct hostComProtocolDef
+  {
+    uint8_t head;
+    struct
+    {
+      uint8_t command;
+      uint8_t valid_length;
+      uint8_t valid_data[APP_RX_DATA_SIZE];
+    } info;
+    // uint8_t sum_check;
+    uint8_t tail;
+  };
 /* USER CODE END EXPORTED_TYPES */
 
 /**
@@ -79,7 +105,6 @@
   */
 
 /* USER CODE BEGIN EXPORTED_MACRO */
-
 /* USER CODE END EXPORTED_MACRO */
 
 /**
@@ -96,6 +121,9 @@ extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
 
+  extern struct usblinkMessageFormatDef usblinkMessage;
+  extern struct hostComProtocolDef hostComProtocol;
+
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -110,6 +138,8 @@ extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
 uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
 
 /* USER CODE BEGIN EXPORTED_FUNCTIONS */
+
+  int8_t usb_printf(char *fmt, ...);
 
 /* USER CODE END EXPORTED_FUNCTIONS */
 

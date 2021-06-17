@@ -39,6 +39,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+#define PRINTER_POWER_ON() HAL_GPIO_WritePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin, GPIO_PIN_SET)
+#define PRINTER_POWER_OFF() HAL_GPIO_WritePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin, GPIO_PIN_RESET)
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -53,41 +56,43 @@
 /* Definitions for peripheralTask */
 osThreadId_t peripheralTaskHandle;
 const osThreadAttr_t peripheralTask_attributes = {
-  .name = "peripheralTask",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+    .name = "peripheralTask",
+    .stack_size = 64 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
 };
 /* Definitions for usblinkTxTask */
 osThreadId_t usblinkTxTaskHandle;
 const osThreadAttr_t usblinkTxTask_attributes = {
-  .name = "usblinkTxTask",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+    .name = "usblinkTxTask",
+    .stack_size = 64 * 4,
+    .priority = (osPriority_t)osPriorityLow,
 };
 /* Definitions for usblinkRxTask */
 osThreadId_t usblinkRxTaskHandle;
 const osThreadAttr_t usblinkRxTask_attributes = {
-  .name = "usblinkRxTask",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+    .name = "usblinkRxTask",
+    .stack_size = 200 * 4,
+    .priority = (osPriority_t)osPriorityLow,
 };
 /* Definitions for inoutDeviceTask */
 osThreadId_t inoutDeviceTaskHandle;
 const osThreadAttr_t inoutDeviceTask_attributes = {
-  .name = "inoutDeviceTask",
-  .stack_size = 300 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+    .name = "inoutDeviceTask",
+    .stack_size = 100 * 4,
+    .priority = (osPriority_t)osPriorityBelowNormal,
 };
-/* Definitions for usblinkSendQueue */
-osMessageQueueId_t usblinkSendQueueHandle;
-const osMessageQueueAttr_t usblinkSendQueue_attributes = {
-  .name = "usblinkSendQueue"
-};
+/* Definitions for usblinkRxRequestQueue */
+osMessageQueueId_t usblinkRxRequestQueueHandle;
+const osMessageQueueAttr_t usblinkRxRequestQueue_attributes = {
+    .name = "usblinkRxRequestQueue"};
+/* Definitions for singleWordQueue */
+osMessageQueueId_t singleWordQueueHandle;
+const osMessageQueueAttr_t singleWordQueue_attributes = {
+    .name = "singleWordQueue"};
 /* Definitions for usblinkRecEvent */
 osEventFlagsId_t usblinkRecEventHandle;
 const osEventFlagsAttr_t usblinkRecEvent_attributes = {
-  .name = "usblinkRecEvent"
-};
+    .name = "usblinkRecEvent"};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -107,7 +112,8 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
   * @param  None
   * @retval None
   */
-void MX_FREERTOS_Init(void) {
+void MX_FREERTOS_Init(void)
+{
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -125,8 +131,11 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_TIMERS */
 
   /* Create the queue(s) */
-  /* creation of usblinkSendQueue */
-  usblinkSendQueueHandle = osMessageQueueNew (5, sizeof(struct usblinkMessageFormatDef), &usblinkSendQueue_attributes);
+  /* creation of usblinkRxRequestQueue */
+  usblinkRxRequestQueueHandle = osMessageQueueNew(1, sizeof(uint8_t), &usblinkRxRequestQueue_attributes);
+
+  /* creation of singleWordQueue */
+  singleWordQueueHandle = osMessageQueueNew(32, sizeof(uint8_t), &singleWordQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -156,7 +165,6 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
-
 }
 
 /* USER CODE BEGIN Header_peripheralStartTask */
@@ -172,8 +180,11 @@ void peripheralStartTask(void *argument)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN peripheralStartTask */
   printer_init();
+  PRINTER_POWER_ON();
+  osDelay(20);
+  printer_new_lines(2);
   /* Infinite loop */
-  for(;;)
+  for (;;)
   {
     osDelay(1);
   }
@@ -189,16 +200,23 @@ void peripheralStartTask(void *argument)
 /* USER CODE END Header_usblinkTxStartTask */
 void usblinkTxStartTask(void *argument)
 {
-	/* USER CODE BEGIN usblinkTxStartTask */
-	while(!isSysInitOver);
-  struct usblinkMessageFormatDef usblinkMessage;
-	/* Infinite loop */
-	for(;;)
-	{
-		if(xQueueReceive(usblinkSendQueueHandle, &usblinkMessage, portMAX_DELAY) == pdTRUE){
-			CDC_Transmit_FS(usblinkMessage.info, usblinkMessage.info_length);
-		}
-	}
+  /* USER CODE BEGIN usblinkTxStartTask */
+  while (!isSysInitOver)
+    ;
+  /* Infinite loop */
+  for (;;)
+  {
+    if (usblinkMessage.tx.length)
+    {
+      uint8_t retval;
+      retval = CDC_Transmit_FS(usblinkMessage.tx.info, usblinkMessage.tx.length);
+      if (retval == USBD_OK)
+      {
+        usblinkMessage.tx.length = 0;
+      }
+    }
+    osDelay(1);
+  }
   /* USER CODE END usblinkTxStartTask */
 }
 
@@ -212,9 +230,21 @@ void usblinkTxStartTask(void *argument)
 void usblinkRxStartTask(void *argument)
 {
   /* USER CODE BEGIN usblinkRxStartTask */
+
+  // static uint16_t pos_char = 0;
+
   /* Infinite loop */
-  for(;;)
+  for (;;)
   {
+    uint8_t request;
+
+    if (xQueueReceive(usblinkRxRequestQueueHandle, &request, 1000))
+    {
+      if (hostComProtocol.info.command == _cmd_single_word_write)
+      {
+        printer_write_single_char(hostComProtocol.info.valid_data[0]);
+      }
+    }
     osDelay(1);
   }
   /* USER CODE END usblinkRxStartTask */
@@ -229,28 +259,29 @@ void usblinkRxStartTask(void *argument)
 /* USER CODE END Header_inoutDeviceStartTask */
 void inoutDeviceStartTask(void *argument)
 {
-	/* USER CODE BEGIN inoutDeviceStartTask */
-	while(!isSysInitOver);
+  /* USER CODE BEGIN inoutDeviceStartTask */
+  while (!isSysInitOver)
+    ;
 
-	/* Infinite loop */
-	for(;;)
-	{
-		KEY_PinState val;
-		val = key_scan_signal(0, HAL_GPIO_ReadPin(USER_KEY1_GPIO_Port, USER_KEY1_Pin));
-		if(val == KEY_SIGNAL_RELEASE){
-			HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
-			HAL_GPIO_TogglePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin);
-			usb_printf("hello1\r\n");
-//      usb_printf("%d %d", *FONT_CHAR_RASTERS[0], *FONT_CHAR_RASTERS[1]);
-		}
-		val = key_scan_signal(1, HAL_GPIO_ReadPin(USER_KEY2_GPIO_Port, USER_KEY2_Pin));
-    if(val == KEY_SIGNAL_RELEASE){
-      uint8_t val = printer_write_text("hello world");
-      usb_printf("write result: %d\r\n", val);
+  /* Infinite loop */
+  for (;;)
+  {
+    KEY_PinState val;
+    val = key_scan_signal(0, HAL_GPIO_ReadPin(USER_KEY1_GPIO_Port, USER_KEY1_Pin));
+    if (val == KEY_SIGNAL_RELEASE)
+    {
+      HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
+      HAL_GPIO_TogglePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin);
+      // usb_printf("%d %d", *FONT_CHAR_RASTERS[0], *FONT_CHAR_RASTERS[1]);
     }
-		osDelay(5);
-	}
-	/* USER CODE END inoutDeviceStartTask */
+    val = key_scan_signal(1, HAL_GPIO_ReadPin(USER_KEY2_GPIO_Port, USER_KEY2_Pin));
+    if (val == KEY_SIGNAL_RELEASE)
+    {
+      printer_new_lines(1);
+    }
+    osDelay(5);
+  }
+  /* USER CODE END inoutDeviceStartTask */
 }
 
 /* Private application code --------------------------------------------------*/
