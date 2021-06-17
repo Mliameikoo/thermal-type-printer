@@ -58,7 +58,7 @@ namespace TypeWriterHostApp
             // 
             this.richTextBox1.Location = new System.Drawing.Point(12, 39);
             this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.Size = new System.Drawing.Size(259, 222);
+            this.richTextBox1.Size = new System.Drawing.Size(1129, 277);
             this.richTextBox1.TabIndex = 2;
             this.richTextBox1.Text = "";
             // 
@@ -66,7 +66,7 @@ namespace TypeWriterHostApp
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(283, 408);
+            this.ClientSize = new System.Drawing.Size(1177, 561);
             this.Controls.Add(this.richTextBox1);
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.button1);

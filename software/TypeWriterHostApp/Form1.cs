@@ -8,11 +8,18 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using System.Management;
+using System.IO.Ports;
+using Microsoft.VisualBasic;
+using Microsoft.VisualBasic.CompilerServices;
 
 namespace TypeWriterHostApp
 {
     public partial class Form1 : Form
     {
+        private string str_vid = "0483";
+        private string str_pid = "5740";
+
         public Form1()
         {
             InitializeComponent();
@@ -25,40 +32,45 @@ namespace TypeWriterHostApp
 
         private void button1_Click(object sender, EventArgs e)
         {
-            /*string[] available_serial_port;
-            available_serial_port = System.IO.Ports.SerialPort.GetPortNames();*/
+            string[] available_serial_port;
+            available_serial_port = System.IO.Ports.SerialPort.GetPortNames();
 
-            //定义注册表顶级节点 其命名空间是using Microsoft.Win32;
-            RegistryKey USBKey;
-            //检索子项    
-            USBKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Enum\USBSTOR", false);
-
-            //检索所有子项USBSTOR下的字符串数组
-            foreach (string sub1 in USBKey.GetSubKeyNames())
+            ManagementObjectCollection.ManagementObjectEnumerator enumerator = null;
+            ManagementObjectSearcher searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT * FROM WIN32_PnPEntity");
+            string comName = "";
+            try
             {
-                RegistryKey sub1key = USBKey.OpenSubKey(sub1, false);
-                foreach (string sub2 in sub1key.GetSubKeyNames())
+                enumerator = searcher.Get().GetEnumerator();
+                while (enumerator.MoveNext())
                 {
-                    try
+                    ManagementObject current = (ManagementObject)enumerator.Current;
+                    if (Strings.InStr(Conversions.ToString(current["Caption"]), "(COM", CompareMethod.Binary) <= 0)
                     {
-                        //打开sub1key的子项
-                        RegistryKey sub2key = sub1key.OpenSubKey(sub2, false);
-                        //检索Service=disk(磁盘)值的子项 cdrom(光盘)
-                        if (sub2key.GetValue("Service", "").Equals("disk"))
-                        {
-                            String Path = "USBSTOR" + "\\" + sub1 + "\\" + sub2;
-                            String Name = (string)sub2key.GetValue("FriendlyName", "");
-                            richTextBox1.AppendText("USB名称  " + Name + "\r\n");
-                            richTextBox1.AppendText("UID标记  " + sub2 + "\r\n");
-                            richTextBox1.AppendText("路径信息 " + Path + "\r\n\r\n");
-                        }
+                        continue;
                     }
-                    catch (Exception msg) //异常处理
+                    /*foreach (var property in current.Properties)
                     {
-                        MessageBox.Show(msg.Message);
+                        richTextBox1.AppendText(property.Name + ":" + property.Value + "\r\n");//列出清单
+                    }*/
+                    if (current["DeviceID"].ToString().Substring(0, 5).Equals(@"USB\V"))//排除系统的COM1
+                    {
+                        if (current["DeviceID"].ToString().Substring(0, 21).Equals("USB\\VID_" + str_vid + @"&PID_" + str_pid))
+                        {
+                            comName = current["Name"].ToString().Substring(10, 4);
+                            richTextBox1.AppendText(comName + "\r\n");
+                            break;
+                        }
                     }
                 }
             }
+            finally
+            {
+                if (enumerator != null)
+                {
+                    enumerator.Dispose();
+                }
+            }
+
 
         }
 
