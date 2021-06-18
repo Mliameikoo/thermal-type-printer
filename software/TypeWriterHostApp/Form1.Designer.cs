@@ -34,11 +34,12 @@ namespace TypeWriterHostApp
             this.serialPort1 = new System.IO.Ports.SerialPort(this.components);
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.SuspendLayout();
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(66, 322);
+            this.button1.Location = new System.Drawing.Point(113, 430);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(158, 53);
             this.button1.TabIndex = 0;
@@ -58,15 +59,21 @@ namespace TypeWriterHostApp
             // 
             this.richTextBox1.Location = new System.Drawing.Point(12, 39);
             this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.Size = new System.Drawing.Size(1129, 277);
+            this.richTextBox1.Size = new System.Drawing.Size(259, 264);
             this.richTextBox1.TabIndex = 2;
             this.richTextBox1.Text = "";
+            this.richTextBox1.TextChanged += new System.EventHandler(this.richTextBox1_TextChanged);
+            this.richTextBox1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.richTextBox1_KeyDown);
+            // 
+            // timer1
+            // 
+            this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1177, 561);
+            this.ClientSize = new System.Drawing.Size(284, 495);
             this.Controls.Add(this.richTextBox1);
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.button1);
@@ -84,6 +91,7 @@ namespace TypeWriterHostApp
         private System.IO.Ports.SerialPort serialPort1;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.RichTextBox richTextBox1;
+        private System.Windows.Forms.Timer timer1;
     }
 }
 

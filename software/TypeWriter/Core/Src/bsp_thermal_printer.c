@@ -6,6 +6,9 @@
 #include "user_app.h"
 #include "font_thermal_printer.h"
 #include <stdarg.h>
+
+#include "FreeRTOS.h"
+#include "cmsis_os.h"
 /* Private define ------------------------------------------------------------*/
 #define PRINTER_ROW_WIDTH 384 // 2'inch thermal-printer-head, 384 points / 48 byte
 // Default font size is too small to read.
@@ -119,6 +122,8 @@ int8_t printer_write_single_char(uint8_t character)
   }
   printer_feed_paper_with_lines(-64 + 32 * next_lines);
   motor_set_idle();
+  
+//  osDelay(200);
 
   uint8_t single_line_char_nums = 0;
   retval = text_limit_length(printerInfo.xpos_char, write_nums, &single_line_char_nums);
@@ -137,11 +142,15 @@ int8_t printer_write_single_char(uint8_t character)
 
   printer_feed_paper_with_lines(32);
   motor_set_idle();
+  
+  
 
   // motor_set_idle();
   printerInfo.xpos_char++;
 
   PRINTER_POWER_OFF();
+  
+//  osDelay(200);
 
   return retval;
 }

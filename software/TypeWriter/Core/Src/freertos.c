@@ -242,7 +242,16 @@ void usblinkRxStartTask(void *argument)
     {
       if (hostComProtocol.info.command == _cmd_single_word_write)
       {
-        printer_write_single_char(hostComProtocol.info.valid_data[0]);
+		  
+				for(uint8_t i=0; i<hostComProtocol.info.valid_length; i++){
+					if(hostComProtocol.info.valid_data[i] == '\n'){
+						printer_new_lines(1);
+					}
+					else{
+						printer_write_single_char(hostComProtocol.info.valid_data[i]);
+					}
+				}
+        
       }
     }
     osDelay(1);
@@ -275,10 +284,13 @@ void inoutDeviceStartTask(void *argument)
       // usb_printf("%d %d", *FONT_CHAR_RASTERS[0], *FONT_CHAR_RASTERS[1]);
     }
     val = key_scan_signal(1, HAL_GPIO_ReadPin(USER_KEY2_GPIO_Port, USER_KEY2_Pin));
-    if (val == KEY_SIGNAL_RELEASE)
-    {
-      printer_new_lines(1);
-    }
+//    if (val == KEY_SIGNAL_RELEASE)
+//    {
+//      printer_new_lines(1);
+//    }
+	if (keyPress.valid[1]){
+		printer_new_lines(1);
+	}
     osDelay(5);
   }
   /* USER CODE END inoutDeviceStartTask */
