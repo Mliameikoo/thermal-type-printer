@@ -280,38 +280,129 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
-  uint8_t vaild_length, sum_check;
+  static enum usblinkRxStateDef rx_state = _rx_state_idle;
+  static uint16_t length_of_valid_data_under_transmit = 0;
 
-  if (Buf[0] == hostComProtocol.head && (*Len) > 5 && Buf[(*Len) - 1] == hostComProtocol.tail)
+  uint8_t *pos = Buf;
+
+  uint16_t remain_data_length = 0;
+  uint8_t sum_check = 0;
+
+  while (pos < Buf + (*Len))
   {
-    vaild_length = Buf[1];
-    if (*Len == vaild_length + 5)
+    switch (rx_state)
     {
-      // check sum
-      sum_check = 0;
-      for (uint8_t i = 2; i < vaild_length + 1 + 2; i++)
+    case _rx_state_idle:
+      if (*pos == FRAME_HEAD_CODE)
       {
-        sum_check += Buf[i];
+        rx_state = _rx_state_head_ok;
       }
-      if (sum_check == Buf[(*Len) - 2])
-      {
-        // check sum pass
-        // get data
-        usb_printf("receive ok\r\n");
+      break;
 
-        hostComProtocol.info.command = Buf[2];
-        hostComProtocol.info.valid_length = vaild_length;
-        memcpy(hostComProtocol.info.valid_data, Buf + 3, hostComProtocol.info.valid_length);
+    case _rx_state_head_ok:
+      hostComProtocol.info.valid_length = *pos * 256;
+      // length_of_valid_data_under_transmit = hostComProtocol.info.valid_length;
+      rx_state = _rx_state_length_high8bits_ok;
+      break;
+
+    case _rx_state_length_high8bits_ok:
+      hostComProtocol.info.valid_length += *pos;
+      length_of_valid_data_under_transmit = hostComProtocol.info.valid_length;
+      rx_state = _rx_state_length_low8bits_ok;
+      break;
+
+    case _rx_state_length_low8bits_ok:
+      hostComProtocol.info.command = *pos;
+      rx_state = _rx_state_command_ok;
+      break;
+
+    case _rx_state_command_ok:
+      remain_data_length = (*Len) - (pos - Buf);
+
+      if (length_of_valid_data_under_transmit > remain_data_length)
+      {
+        // 若当前接收缓存中剩余字符长度小于待传输字符，下次接收继续传输
+        memcpy(hostComProtocol.info.valid_data + (hostComProtocol.info.valid_length - length_of_valid_data_under_transmit), pos, remain_data_length);
+        pos += remain_data_length - 1;
+        length_of_valid_data_under_transmit -= remain_data_length;
+      }
+      else
+      {
+        memcpy(hostComProtocol.info.valid_data + (hostComProtocol.info.valid_length - length_of_valid_data_under_transmit), pos, length_of_valid_data_under_transmit);
+        pos += length_of_valid_data_under_transmit - 1;
+        length_of_valid_data_under_transmit = 0;
+      }
+
+      if (!length_of_valid_data_under_transmit)
+      {
+        rx_state = _rx_state_data_ok;
+      }
+      break;
+
+    case _rx_state_data_ok:
+      sum_check = hostComProtocol.info.command;
+      for (uint16_t i = 0; i < hostComProtocol.info.valid_length; i++)
+      {
+        sum_check += hostComProtocol.info.valid_data[i];
+      }
+      if (sum_check == *pos)
+      {
+        rx_state = _rx_state_sum_check_ok;
+      }
+      else
+      {
+        rx_state = _rx_state_idle;
+      }
+      break;
+
+    case _rx_state_sum_check_ok:
+      if (*pos == FRAME_TAIL_CODE)
+      {
+        // receive all down
         uint8_t request = 1;
         portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
         xQueueSendFromISR(usblinkRxRequestQueueHandle, &request, &xHigherPriorityTaskWoken);
-
-        goto TARGET_RECEIVE_OK;
       }
+      rx_state = _rx_state_idle;
+      break;
+
+    default:
+      rx_state = _rx_state_idle;
+      break;
     }
+    pos++;
   }
-  usb_printf("receive error\r\n");
-TARGET_RECEIVE_OK:
+
+  //   if (Buf[0] == hostComProtocol.head && (*Len) > 5 && Buf[(*Len) - 1] == hostComProtocol.tail)
+  //   {
+  //     vaild_length = Buf[1];
+  //     if (*Len == vaild_length + 5)
+  //     {
+  //       // check sum
+  //       sum_check = 0;
+  //       for (uint8_t i = 2; i < vaild_length + 1 + 2; i++)
+  //       {
+  //         sum_check += Buf[i];
+  //       }
+  //       if (sum_check == Buf[(*Len) - 2])
+  //       {
+  //         // check sum pass
+  //         // get data
+  //         usb_printf("receive ok\r\n");
+
+  //         hostComProtocol.info.command = Buf[2];
+  //         hostComProtocol.info.valid_length = vaild_length;
+  //         memcpy(hostComProtocol.info.valid_data, Buf + 3, hostComProtocol.info.valid_length);
+  //         uint8_t request = 1;
+  //         portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+  //         xQueueSendFromISR(usblinkRxRequestQueueHandle, &request, &xHigherPriorityTaskWoken);
+
+  //         goto TARGET_RECEIVE_OK;
+  //       }
+  //     }
+  //   }
+  //   usb_printf("receive error\r\n");
+  // TARGET_RECEIVE_OK:
   return (USBD_OK);
   /* USER CODE END 6 */
 }

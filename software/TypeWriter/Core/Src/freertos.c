@@ -71,24 +71,20 @@ const osThreadAttr_t usblinkTxTask_attributes = {
 osThreadId_t usblinkRxTaskHandle;
 const osThreadAttr_t usblinkRxTask_attributes = {
     .name = "usblinkRxTask",
-    .stack_size = 200 * 4,
+    .stack_size = 300 * 4,
     .priority = (osPriority_t)osPriorityLow,
 };
 /* Definitions for inoutDeviceTask */
 osThreadId_t inoutDeviceTaskHandle;
 const osThreadAttr_t inoutDeviceTask_attributes = {
     .name = "inoutDeviceTask",
-    .stack_size = 100 * 4,
+    .stack_size = 64 * 4,
     .priority = (osPriority_t)osPriorityBelowNormal,
 };
 /* Definitions for usblinkRxRequestQueue */
 osMessageQueueId_t usblinkRxRequestQueueHandle;
 const osMessageQueueAttr_t usblinkRxRequestQueue_attributes = {
     .name = "usblinkRxRequestQueue"};
-/* Definitions for singleWordQueue */
-osMessageQueueId_t singleWordQueueHandle;
-const osMessageQueueAttr_t singleWordQueue_attributes = {
-    .name = "singleWordQueue"};
 /* Definitions for usblinkRecEvent */
 osEventFlagsId_t usblinkRecEventHandle;
 const osEventFlagsAttr_t usblinkRecEvent_attributes = {
@@ -133,9 +129,6 @@ void MX_FREERTOS_Init(void)
   /* Create the queue(s) */
   /* creation of usblinkRxRequestQueue */
   usblinkRxRequestQueueHandle = osMessageQueueNew(1, sizeof(uint8_t), &usblinkRxRequestQueue_attributes);
-
-  /* creation of singleWordQueue */
-  singleWordQueueHandle = osMessageQueueNew(32, sizeof(uint8_t), &singleWordQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -182,11 +175,12 @@ void peripheralStartTask(void *argument)
   printer_init();
   PRINTER_POWER_ON();
   osDelay(20);
-  printer_new_lines(2);
+  printer_new_lines(printerInfo.line_height, 2);
   /* Infinite loop */
   for (;;)
   {
-    osDelay(1);
+
+    osDelay(1000);
   }
   /* USER CODE END peripheralStartTask */
 }
@@ -240,18 +234,52 @@ void usblinkRxStartTask(void *argument)
 
     if (xQueueReceive(usblinkRxRequestQueueHandle, &request, 1000))
     {
-      if (hostComProtocol.info.command == _cmd_single_word_write)
+      switch (hostComProtocol.info.command)
       {
-		  
-				for(uint8_t i=0; i<hostComProtocol.info.valid_length; i++){
-					if(hostComProtocol.info.valid_data[i] == '\n'){
-						printer_new_lines(1);
-					}
-					else{
-						printer_write_single_char(hostComProtocol.info.valid_data[i]);
-					}
-				}
-        
+      case _cmd_single_word_write:
+      {
+        for (uint8_t i = 0; i < hostComProtocol.info.valid_length; i++)
+        {
+          if (hostComProtocol.info.valid_data[i] == '\n')
+          {
+            printer_new_lines(printerInfo.line_height, 1);
+          }
+          else
+          {
+            printer_write_single_char(hostComProtocol.info.valid_data[i]);
+          }
+        }
+        usb_printf("1");
+        break;
+      }
+
+      case _cmd_image_text_write:
+      {
+        struct imageTransmitInfoDef image_text;
+        image_text.width = hostComProtocol.info.valid_data[0];
+        image_text.height = hostComProtocol.info.valid_data[1];
+        image_text.buf.length = hostComProtocol.info.valid_data[2] * 256 + hostComProtocol.info.valid_data[3];
+        image_text.buf.val = hostComProtocol.info.valid_data + 4;
+        printer_write_image_text(image_text);
+        // osDelay(50);
+        usb_printf("1");
+        break;
+      }
+
+      case _cmd_special_order:
+      {
+        uint8_t height;
+        height = hostComProtocol.info.valid_data[1]; // 只取高度信息
+        printer_new_lines(height, 1);
+        usb_printf("1");
+        break;
+      }
+
+      case _cmd_change_offset:
+      {
+
+        break;
+      }
       }
     }
     osDelay(1);
@@ -282,15 +310,17 @@ void inoutDeviceStartTask(void *argument)
       HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
       HAL_GPIO_TogglePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin);
       // usb_printf("%d %d", *FONT_CHAR_RASTERS[0], *FONT_CHAR_RASTERS[1]);
+      usb_printf("%.1lf\r\n", adc_raw_data[5][5] * 3.3 / 4096);
     }
     val = key_scan_signal(1, HAL_GPIO_ReadPin(USER_KEY2_GPIO_Port, USER_KEY2_Pin));
-//    if (val == KEY_SIGNAL_RELEASE)
-//    {
-//      printer_new_lines(1);
-//    }
-	if (keyPress.valid[1]){
-		printer_new_lines(1);
-	}
+    //    if (val == KEY_SIGNAL_RELEASE)
+    //    {
+    //      printer_new_lines(printerInfo.line_height, 1);
+    //    }
+    if (keyPress.valid[1])
+    {
+      printer_new_lines(printerInfo.line_height, 1);
+    }
     osDelay(5);
   }
   /* USER CODE END inoutDeviceStartTask */

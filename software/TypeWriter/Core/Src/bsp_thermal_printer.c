@@ -59,6 +59,8 @@ static int8_t motor_set_idle(void);
 static void motor_set_phases(const uint8_t phases[4]);
 static void motor_single_step(uint8_t direction);
 
+static int8_t printer_feed_paper_with_1bit_lines(int16_t lines_nums);
+
 /* Private user code ---------------------------------------------------------*/
 
 /**
@@ -68,8 +70,10 @@ int8_t printer_init(void)
 {
   int8_t retval = 0;
   // init param
-  printerInfo.scale = PRINTER_TEXT_SCALE;
+  printerInfo.scale = 1;
   printerInfo.xpos_char_max_nums = PRINTER_ROW_WIDTH / 8 / printerInfo.scale;
+  printerInfo.line_height = 16 * printerInfo.scale;
+  printerInfo.height_offset = -2; // Y轴偏移
   // init device
   PRINTER_HEATING_OFF();
   PRINTER_LATCH_OFF();
@@ -104,6 +108,85 @@ int8_t printer_change_char_scale(uint8_t scale)
   return 0;
 }
 
+/**
+  * @brief  打印图像
+  * @param  width: 图像的真实宽度(bit)
+  * @param  height: 图像的真实高度(bit)
+  * @param  buf:  图像数据(列行式，先列再行，纸面上字节低位在字节高位的上方)，buf.length / width >= height
+  * @retval 0:success, 1:缺纸
+  */
+int8_t printer_write_image_text(const struct imageTransmitInfoDef image)
+{
+  int8_t retval = 0;
+  uint8_t single_line_pixel_write_buf[PRINTER_ROW_WIDTH / 8] = {0};
+
+  static int16_t last_feed_pixel_lines = 0;
+
+  PRINTER_POWER_ON();
+
+  // 自动换行
+  uint8_t next_lines = 0;
+  if ((printerInfo.xpos_pixel + image.width * printerInfo.scale) > PRINTER_ROW_WIDTH)
+  {
+    next_lines = 1;
+    printerInfo.xpos_pixel = 0;
+  }
+  // 回纸，继续打印
+  printer_feed_paper_with_lines(-1 * last_feed_pixel_lines - 32 + next_lines * last_feed_pixel_lines);
+  printer_feed_paper_with_1bit_lines(printerInfo.height_offset);
+  motor_set_idle();
+
+  // 将图像数据转置方向，并打印
+  last_feed_pixel_lines = 0;
+  for (uint8_t page = 0; page < image.buf.length / image.width; page++)
+  {
+    for (uint8_t pos = 0; pos < 8; pos++)
+    {
+      memset(single_line_pixel_write_buf, 0, sizeof(single_line_pixel_write_buf) / sizeof(uint8_t));
+      for (uint8_t i = 0; i < image.width; i++)
+      {
+        uint8_t val = image.buf.val[i + page * image.width];
+        if ((val & (1 << pos)) != 0)
+        {
+          // // 不带横向缩放写入
+          // single_line_pixel_write_buf[(printerInfo.xpos_pixel + i) / 8] |= 1 << (7 - ((printerInfo.xpos_pixel + i) % 8));
+          // 带横向缩放写入
+          for (uint16_t j = i * printerInfo.scale; j < (i + 1) * printerInfo.scale; j++)
+          {
+            single_line_pixel_write_buf[((printerInfo.xpos_pixel + j) / 8)] |= 1 << (7 - ((printerInfo.xpos_pixel + j) % 8));
+          }
+        }
+      }
+      for (uint8_t j = 0; j < printerInfo.scale; j++)
+      {
+        retval = printer_print_single_pixel_line(single_line_pixel_write_buf);
+        if (retval)
+        {
+          break;
+        }
+        else
+        {
+          last_feed_pixel_lines += 1;
+        }
+      }
+    }
+  }
+  // last_feed_pixel_lines += image.height;
+  printerInfo.xpos_pixel += image.width * printerInfo.scale * 0.6;
+
+  printer_feed_paper_with_lines(32);
+  motor_set_idle();
+
+  PRINTER_POWER_OFF();
+
+  return retval;
+}
+
+/**
+  * @brief  打印单个字符，可自动换行
+  * @param  character:  ASCII字符
+  * @retval 0:success, 1:缺纸
+  */
 int8_t printer_write_single_char(uint8_t character)
 {
   int8_t retval;
@@ -120,10 +203,9 @@ int8_t printer_write_single_char(uint8_t character)
     next_lines = printerInfo.xpos_char / printerInfo.xpos_char_max_nums;
     printerInfo.xpos_char = printerInfo.xpos_char % printerInfo.xpos_char_max_nums;
   }
-  printer_feed_paper_with_lines(-64 + 32 * next_lines);
+  // 回纸
+  printer_feed_paper_with_lines(-2 * printerInfo.line_height + printerInfo.line_height * next_lines);
   motor_set_idle();
-  
-//  osDelay(200);
 
   uint8_t single_line_char_nums = 0;
   retval = text_limit_length(printerInfo.xpos_char, write_nums, &single_line_char_nums);
@@ -140,17 +222,15 @@ int8_t printer_write_single_char(uint8_t character)
 
   retval |= text_print_pixel_row(rasters_pointer, single_line_char_nums, start_x_pos);
 
-  printer_feed_paper_with_lines(32);
+  printer_feed_paper_with_lines(printerInfo.line_height);
   motor_set_idle();
-  
-  
 
   // motor_set_idle();
   printerInfo.xpos_char++;
 
   PRINTER_POWER_OFF();
-  
-//  osDelay(200);
+
+  //  osDelay(200);
 
   return retval;
 }
@@ -160,13 +240,14 @@ int8_t printer_write_single_char(uint8_t character)
   * @param  lines: 正负行数
   * @retval 0:success, 1:缺纸
   */
-int8_t printer_new_lines(int16_t lines)
+int8_t printer_new_lines(uint16_t line_height, int16_t lines)
 {
   int8_t retval;
   PRINTER_POWER_ON();
-  retval = printer_feed_paper_with_lines(lines * 32);
+  retval = printer_feed_paper_with_lines(lines * line_height);
   motor_set_idle();
   printerInfo.xpos_char = 0;
+  printerInfo.xpos_pixel = 0;
   PRINTER_POWER_OFF();
   return retval;
 }
@@ -373,6 +454,18 @@ static int8_t printer_feed_paper_with_lines(int16_t lines_nums)
     return -1;
   }
   printerInfo.motor_run_cnt = 4 * lines_nums; // 4: stepsPerLine
+  while (printerInfo.motor_run_cnt)
+    ; // wait until finished
+  return 0;
+}
+
+static int8_t printer_feed_paper_with_1bit_lines(int16_t lines_nums)
+{
+  if (PRINTER_PAPER_EXIST_READ())
+  {
+    return -1;
+  }
+  printerInfo.motor_run_cnt = 1 * lines_nums; // 4: stepsPerLine
   while (printerInfo.motor_run_cnt)
     ; // wait until finished
   return 0;

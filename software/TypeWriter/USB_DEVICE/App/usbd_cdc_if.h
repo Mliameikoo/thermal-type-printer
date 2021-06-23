@@ -51,8 +51,11 @@
 /* USER CODE BEGIN EXPORTED_DEFINES */
 /* Define size for the receive and transmit buffer over CDC */
 /* It's up to user to redefine and/or remove those define */
-#define APP_RX_DATA_SIZE 200
-#define APP_TX_DATA_SIZE 200
+#define APP_RX_DATA_SIZE 1000
+#define APP_TX_DATA_SIZE 100
+
+#define FRAME_HEAD_CODE 0xF5
+#define FRAME_TAIL_CODE 0x5F
 
 /* USER CODE END EXPORTED_DEFINES */
 
@@ -66,6 +69,19 @@
   */
 
 /* USER CODE BEGIN EXPORTED_TYPES */
+
+  enum usblinkRxStateDef
+  {
+    _rx_state_idle = 0u,
+    _rx_state_head_ok,
+    _rx_state_length_high8bits_ok,
+    _rx_state_length_low8bits_ok,
+    _rx_state_command_ok,
+    _rx_state_data_ok,
+    _rx_state_sum_check_ok,
+    _rx_state_finish_ok
+  };
+
   struct usblinkMessageFormatDef
   {
     struct
@@ -87,7 +103,7 @@
     struct
     {
       uint8_t command;
-      uint8_t valid_length;
+      uint16_t valid_length;
       uint8_t valid_data[APP_RX_DATA_SIZE];
     } info;
     // uint8_t sum_check;

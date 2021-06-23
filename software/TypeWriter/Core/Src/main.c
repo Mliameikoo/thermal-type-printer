@@ -21,6 +21,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "adc.h"
+#include "dma.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -92,6 +93,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
   MX_SPI1_Init();
   MX_TIM3_Init();
@@ -191,10 +193,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-  if (htim->Instance == TIM4){
+  if (htim->Instance == TIM4)
+  {
     // 10khz & 100us
     led_shining_loop();
-    if(++_500us_tick > 5){
+    if (++_500us_tick > 5)
+    {
       _500us_tick = 0;
       motor_phases_update_loop();
     }

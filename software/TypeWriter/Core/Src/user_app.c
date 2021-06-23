@@ -6,10 +6,13 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "cmsis_os.h"
+/* Private defines -----------------------------------------------------------*/
+
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
 uint8_t isSysInitOver = false;
+uint16_t adc_raw_data[ADC_RAW_DATA_DEPTH][ADC_CHANNEL_NUMS] = {0}; /* raw adc-value cache */
 /* Private user code ---------------------------------------------------------*/
 /**
   * @brief  user system initial
@@ -18,6 +21,9 @@ uint8_t isSysInitOver = false;
 uint8_t USER_SYS_Init(void)
 {
 	uint8_t retval = 0;
+
+	/* 开始adc-dma传输 */
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_raw_data, ADC_RAW_DATA_DEPTH * ADC_CHANNEL_NUMS);
 
 	// reset usb state
 	usb_analog_plug();
