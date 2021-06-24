@@ -22,8 +22,8 @@ uint8_t USER_SYS_Init(void)
 {
 	uint8_t retval = 0;
 
-	/* 开始adc-dma传输 */
-	HAL_ADC_Start_DMA(&hadc1, (uint32_t *)adc_raw_data, ADC_RAW_DATA_DEPTH * ADC_CHANNEL_NUMS);
+	/* ADC校准 */
+	HAL_ADCEx_Calibration_Start(&hadc1);
 
 	// reset usb state
 	usb_analog_plug();

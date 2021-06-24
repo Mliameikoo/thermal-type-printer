@@ -14,6 +14,7 @@
 // Default font size is too small to read.
 // Set scale to 2 for normal use. Set to 3 for demonstration.
 #define PRINTER_TEXT_SCALE 2
+#define PRINTER_OFF_HEIGHT 40 // 打印完额外滚动的高度，用于方便观看打印效果
 
 #define PRINTER_POWER_ON() HAL_GPIO_WritePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin, GPIO_PIN_SET)
 #define PRINTER_POWER_OFF() HAL_GPIO_WritePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin, GPIO_PIN_RESET)
@@ -80,6 +81,7 @@ int8_t printer_init(void)
   uint8_t empty_array[PRINTER_ROW_WIDTH / 8] = {0};
   HAL_SPI_Transmit(&hspi1, empty_array, PRINTER_ROW_WIDTH / 8, 5);
   PRINTER_LATCH_ON();
+  printer_new_lines(printerInfo.line_height, 2);
   motor_set_idle();
   return retval;
 }
@@ -132,9 +134,9 @@ int8_t printer_write_image_text(const struct imageTransmitInfoDef image)
     printerInfo.xpos_pixel = 0;
   }
   // 回纸，继续打印
-  printer_feed_paper_with_lines(-1 * last_feed_pixel_lines - 32 + next_lines * last_feed_pixel_lines);
+  printer_feed_paper_with_lines(-1 * last_feed_pixel_lines - PRINTER_OFF_HEIGHT + next_lines * last_feed_pixel_lines);
   printer_feed_paper_with_1bit_lines(printerInfo.height_offset);
-  motor_set_idle();
+  // motor_set_idle();
 
   // 将图像数据转置方向，并打印
   last_feed_pixel_lines = 0;
@@ -142,6 +144,10 @@ int8_t printer_write_image_text(const struct imageTransmitInfoDef image)
   {
     for (uint8_t pos = 0; pos < 8; pos++)
     {
+      // if (pos + page * 8 >= image.height)
+      // {
+      //   break;
+      // }
       memset(single_line_pixel_write_buf, 0, sizeof(single_line_pixel_write_buf) / sizeof(uint8_t));
       for (uint8_t i = 0; i < image.width; i++)
       {
@@ -172,9 +178,9 @@ int8_t printer_write_image_text(const struct imageTransmitInfoDef image)
     }
   }
   // last_feed_pixel_lines += image.height;
-  printerInfo.xpos_pixel += image.width * printerInfo.scale * 0.6;
+  printerInfo.xpos_pixel += image.width * printerInfo.scale;
 
-  printer_feed_paper_with_lines(32);
+  printer_feed_paper_with_lines(PRINTER_OFF_HEIGHT);
   motor_set_idle();
 
   PRINTER_POWER_OFF();
@@ -197,15 +203,32 @@ int8_t printer_write_single_char(uint8_t character)
 
   write_buf[0] = character;
 
-  uint8_t next_lines = 0;
-  if (printerInfo.xpos_char >= printerInfo.xpos_char_max_nums)
+  int8_t next_lines = 0;
+
+  // 光标位置判断
+  if (character == FONT_BACKSPACE_CHAR_CODE)
+  {
+    // backspace
+    if (printerInfo.xpos_char == 0)
+    {
+      printerInfo.xpos_char = printerInfo.xpos_char_max_nums - 1;
+      next_lines = -1;
+    }
+    else
+    {
+      printerInfo.xpos_char--; // 实现退格
+    }
+  }
+  else if (printerInfo.xpos_char >= printerInfo.xpos_char_max_nums)
   {
     next_lines = printerInfo.xpos_char / printerInfo.xpos_char_max_nums;
     printerInfo.xpos_char = printerInfo.xpos_char % printerInfo.xpos_char_max_nums;
   }
+
   // 回纸
-  printer_feed_paper_with_lines(-2 * printerInfo.line_height + printerInfo.line_height * next_lines);
-  motor_set_idle();
+  printer_feed_paper_with_lines(-1 * (printerInfo.line_height + PRINTER_OFF_HEIGHT) + printerInfo.line_height * next_lines);
+  printer_feed_paper_with_1bit_lines(printerInfo.height_offset);
+  // motor_set_idle();
 
   uint8_t single_line_char_nums = 0;
   retval = text_limit_length(printerInfo.xpos_char, write_nums, &single_line_char_nums);
@@ -222,11 +245,13 @@ int8_t printer_write_single_char(uint8_t character)
 
   retval |= text_print_pixel_row(rasters_pointer, single_line_char_nums, start_x_pos);
 
-  printer_feed_paper_with_lines(printerInfo.line_height);
+  printer_feed_paper_with_lines(PRINTER_OFF_HEIGHT);
   motor_set_idle();
 
-  // motor_set_idle();
-  printerInfo.xpos_char++;
+  if (character != FONT_BACKSPACE_CHAR_CODE)
+  {
+    printerInfo.xpos_char++;
+  }
 
   PRINTER_POWER_OFF();
 
