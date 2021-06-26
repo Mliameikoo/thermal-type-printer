@@ -24,7 +24,8 @@
 #define __USBD_CDC_IF_H__
 
 #ifdef __cplusplus
- extern "C" {
+extern "C"
+{
 #endif
 
 /* Includes ------------------------------------------------------------------*/
@@ -52,23 +53,24 @@
 /* Define size for the receive and transmit buffer over CDC */
 /* It's up to user to redefine and/or remove those define */
 #define APP_RX_DATA_SIZE 1000
-#define APP_TX_DATA_SIZE 100
+#define APP_TX_DATA_SIZE 200
 
 #define FRAME_HEAD_CODE 0xF5
 #define FRAME_TAIL_CODE 0x5F
+#define FRAME_STRUCTURE_CODE_LENGTH 6 // 一个完整帧中除去valid_data剩余部分的长度
 
-/* USER CODE END EXPORTED_DEFINES */
+  /* USER CODE END EXPORTED_DEFINES */
 
-/**
+  /**
   * @}
   */
 
-/** @defgroup USBD_CDC_IF_Exported_Types USBD_CDC_IF_Exported_Types
+  /** @defgroup USBD_CDC_IF_Exported_Types USBD_CDC_IF_Exported_Types
   * @brief Types.
   * @{
   */
 
-/* USER CODE BEGIN EXPORTED_TYPES */
+  /* USER CODE BEGIN EXPORTED_TYPES */
 
   enum usblinkRxStateDef
   {
@@ -78,8 +80,7 @@
     _rx_state_length_low8bits_ok,
     _rx_state_command_ok,
     _rx_state_data_ok,
-    _rx_state_sum_check_ok,
-    _rx_state_finish_ok
+    _rx_state_sum_check_ok /* finish */
   };
 
   struct usblinkMessageFormatDef
@@ -109,65 +110,67 @@
     // uint8_t sum_check;
     uint8_t tail;
   };
-/* USER CODE END EXPORTED_TYPES */
+  /* USER CODE END EXPORTED_TYPES */
 
-/**
+  /**
   * @}
   */
 
-/** @defgroup USBD_CDC_IF_Exported_Macros USBD_CDC_IF_Exported_Macros
+  /** @defgroup USBD_CDC_IF_Exported_Macros USBD_CDC_IF_Exported_Macros
   * @brief Aliases.
   * @{
   */
 
-/* USER CODE BEGIN EXPORTED_MACRO */
-/* USER CODE END EXPORTED_MACRO */
+  /* USER CODE BEGIN EXPORTED_MACRO */
+  /* USER CODE END EXPORTED_MACRO */
 
-/**
+  /**
   * @}
   */
 
-/** @defgroup USBD_CDC_IF_Exported_Variables USBD_CDC_IF_Exported_Variables
+  /** @defgroup USBD_CDC_IF_Exported_Variables USBD_CDC_IF_Exported_Variables
   * @brief Public variables.
   * @{
   */
 
-/** CDC Interface callback. */
-extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
+  /** CDC Interface callback. */
+  extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
 
-/* USER CODE BEGIN EXPORTED_VARIABLES */
+  /* USER CODE BEGIN EXPORTED_VARIABLES */
 
   extern struct usblinkMessageFormatDef usblinkMessage;
   extern struct hostComProtocolDef hostComProtocol;
 
-/* USER CODE END EXPORTED_VARIABLES */
+  /* USER CODE END EXPORTED_VARIABLES */
 
-/**
+  /**
   * @}
   */
 
-/** @defgroup USBD_CDC_IF_Exported_FunctionsPrototype USBD_CDC_IF_Exported_FunctionsPrototype
+  /** @defgroup USBD_CDC_IF_Exported_FunctionsPrototype USBD_CDC_IF_Exported_FunctionsPrototype
   * @brief Public functions declaration.
   * @{
   */
 
-uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
+  uint8_t CDC_Transmit_FS(uint8_t *Buf, uint16_t Len);
 
-/* USER CODE BEGIN EXPORTED_FUNCTIONS */
+  /* USER CODE BEGIN EXPORTED_FUNCTIONS */
 
   int8_t usb_printf(char *fmt, ...);
+  int8_t usb_send_string(uint16_t length, uint8_t *buf);
+  int8_t usb_send_frame(uint8_t cmd, uint16_t valid_length, uint8_t *valid_data_buf);
 
-/* USER CODE END EXPORTED_FUNCTIONS */
+  /* USER CODE END EXPORTED_FUNCTIONS */
 
-/**
+  /**
   * @}
   */
 
-/**
+  /**
   * @}
   */
 
-/**
+  /**
   * @}
   */
 

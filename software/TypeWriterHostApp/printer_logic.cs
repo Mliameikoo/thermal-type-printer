@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.VisualBasic;
+using Microsoft.VisualBasic.CompilerServices;
+using System;
+using System.Drawing;
 using System.Management;
 using System.Windows.Forms;
-using System.Drawing;
-using Microsoft.VisualBasic;
-using Microsoft.VisualBasic.CompilerServices;
 
 namespace TypeWriterHostApp
 {
@@ -16,7 +12,6 @@ namespace TypeWriterHostApp
         private string str_vid = "0483";
         private string str_pid = "5740";
         public PrinterTypeDef PrinterInfo;
-
 
         public System.Drawing.Bitmap ChangeStringToImage(string pic)
         {
@@ -77,7 +72,7 @@ namespace TypeWriterHostApp
 
             // 截取左右两边的多余部分
             int horizon_start_pos = 0;
-            int horizon_end_pos = bmp.Width-1;
+            int horizon_end_pos = bmp.Width - 1;
             // 寻找出左右边界
             for (int i = 0; i < bmp.Width; i++)
             {
@@ -96,7 +91,7 @@ namespace TypeWriterHostApp
                     horizon_end_pos = i;
                 }
             }
-            for (int i = bmp.Width-1; i >= 0; i--)
+            for (int i = bmp.Width - 1; i >= 0; i--)
             {
                 bool find_valid_pixel = false;
                 for (int j = 0; j < bmp.Height; j++)
@@ -127,7 +122,7 @@ namespace TypeWriterHostApp
             Bitmap new_bmp = new Bitmap(horizon_end_pos - horizon_start_pos + 1 + left_offset + right_offset, bmp.Height);
             // 截取出对应区域
             Graphics g2 = Graphics.FromImage(new_bmp);
-            Rectangle origReg = new Rectangle(horizon_start_pos- left_offset, 0, horizon_end_pos - horizon_start_pos + 1 + left_offset + right_offset, bmp.Height);
+            Rectangle origReg = new Rectangle(horizon_start_pos - left_offset, 0, horizon_end_pos - horizon_start_pos + 1 + left_offset + right_offset, bmp.Height);
             Rectangle destReg = new Rectangle(0, 0, new_bmp.Width, new_bmp.Height);
             g2.DrawImage(bmp, destReg, origReg, GraphicsUnit.Pixel);
 

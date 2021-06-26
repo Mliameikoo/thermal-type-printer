@@ -1,12 +1,7 @@
-﻿using Microsoft.Graph;
-using Microsoft.VisualBasic;
-using Microsoft.VisualBasic.CompilerServices;
-using System;
-using System.Management;
-using System.Windows.Forms;
-using System.IO.Ports;
+﻿using System;
 using System.Drawing;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace TypeWriterHostApp
 {
@@ -24,19 +19,21 @@ namespace TypeWriterHostApp
     };
     public struct MessageSendInfoTypeDef
     {
-        public bool use_cache_buf;          // 是否不使用richTextBox内容而使用临时缓存内容进行发送
-        public string cache_buf;            // 临时缓存内容
-        public int total_send_nums;         // 本轮总共需要发送的数目
-        public int now_send_nums;           // 本轮发送中当前已发送的数目
+        public bool use_cache_buf;              // 是否不使用richTextBox内容而使用临时缓存内容进行发送
+        public string cache_buf;                    // 临时缓存内容
+        public int total_send_nums;               // 本轮总共需要发送的数目
+        public int now_send_nums;               // 本轮发送中当前已发送的数目
         public bool send_enable_license;    // 是否启动发送
-        public bool send_ack_flag;          // 发送后是否收到应答标志
-        public int text_read_pos;           // 本轮发送中当前读取的位置
+        public bool send_ack_flag;              // 发送后是否收到应答标志
+        public int ack_param;                   // 应答校验内容
+        public int text_read_pos;               // 本轮发送中当前读取的位置
     };
 
     public partial class Form1 : Form
     {
         printer_logic printerClass = new printer_logic();
-        MessageSendInfoTypeDef sendInfo;
+        protocol_logic protocol_Logic = new protocol_logic();
+        public MessageSendInfoTypeDef sendInfo;
 
         public Form1()
         {
@@ -67,6 +64,8 @@ namespace TypeWriterHostApp
             ToolStripMenuItem_2.Checked = true; // 默认是image_text写入模式
 
             printerClass.PrinterInfo.mode = PrinterOperatingModeEnumDef.__ImageTextMode;
+
+            richTextBox1.LanguageOption = RichTextBoxLanguageOptions.UIFonts;
 
             /*Thread Thread_ProgressBar_Handle = new Thread(new ThreadStart(Thread_ProgressBar));
             Thread_ProgressBar_Handle.Start();*/
@@ -107,7 +106,6 @@ namespace TypeWriterHostApp
                 }
                 else if (ex.GetType().ToString().Equals("System.IO.IOException"))
                 {
-
                     MessageBox.Show("设备连接超时，已重启", "异常提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
@@ -165,11 +163,14 @@ namespace TypeWriterHostApp
             {
                 if (sendInfo.send_enable_license)
                 {
-                    // button1.Enabled = false; // 锁定按键
-                    button6.Enabled = false; // 锁定按键
-                    button7.Enabled = false; // 锁定按键
-                    button1.Text = "取消打印";
-                    richTextBox1.Enabled = false; // 锁定写入框
+                    this.Invoke(new EventHandler(delegate
+                    {
+                        // button1.Enabled = false; // 锁定按键
+                        button6.Enabled = false; // 锁定按键
+                        button7.Enabled = false; // 锁定按键
+                        button1.Text = "取消打印";
+                        richTextBox1.Enabled = false; // 锁定写入框
+                    }));
 
                     if (sendInfo.send_ack_flag == true)
                     {
@@ -178,49 +179,71 @@ namespace TypeWriterHostApp
                         if (sendInfo.use_cache_buf)
                         {
                             map = printerClass.GetStrImage(sendInfo.cache_buf[sendInfo.text_read_pos++].ToString(), new Font(richTextBox1.Font.FontFamily, richTextBox1.Font.Size, richTextBox1.Font.Style));
+                            byte[] bit_result = new byte[((map.Height + 7) / 8) * map.Width];
+                            bit_result = printerClass.GetCodeTabFromBitmap_ColRowMode(map, map.Width, map.Height);
+                            char text_read = sendInfo.cache_buf[sendInfo.text_read_pos - 1];
+                            if (text_read == '\n')
+                            {
+                                // 如果当前即将发送换行符，改用特殊指令发送
+                                byte[] temporary_buf = new byte[2];
+                                temporary_buf[0] = ((byte)map.Width);
+                                temporary_buf[1] = ((byte)map.Height);
+                                Uart_Send_Raw_Info(0x04, temporary_buf);
+                            }
+                            else
+                            {
+                                byte[] valid_buf = new byte[bit_result.Length + 4];
+                                valid_buf[0] = ((byte)map.Width);
+                                valid_buf[1] = ((byte)map.Height);
+                                valid_buf[2] = ((byte)(bit_result.Length >> 8)); // first high-8-bit
+                                valid_buf[3] = ((byte)(bit_result.Length & 0xFF)); // second low-8-bit
+                                bit_result.CopyTo(valid_buf, 4);
+                                Uart_Send_Raw_Info(0x03, valid_buf);
+                            }
+                            this.Invoke(new EventHandler(delegate
+                            {
+                                textBox3.Clear();
+                                textBox3.Text = (map.Width.ToString() + "," + map.Height.ToString() + "," + bit_result.Length.ToString());
+                            }));
                         }
                         else
                         {
-                            richTextBox1.Select(sendInfo.text_read_pos, 1); // 单独对每个字符进行字体判断
-                            map = printerClass.GetStrImage(richTextBox1.Text[sendInfo.text_read_pos++].ToString(), new Font(richTextBox1.SelectionFont.FontFamily, richTextBox1.SelectionFont.Size, richTextBox1.SelectionFont.Style));
+                            this.Invoke(new EventHandler(delegate
+                            {
+                                richTextBox1.Select(sendInfo.text_read_pos, 1); // 单独对每个字符进行字体判断
+                                map = printerClass.GetStrImage(richTextBox1.Text[sendInfo.text_read_pos++].ToString(), new Font(richTextBox1.SelectionFont.FontFamily, richTextBox1.SelectionFont.Size, richTextBox1.SelectionFont.Style));
+                                byte[] bit_result = new byte[((map.Height + 7) / 8) * map.Width];
+                                bit_result = printerClass.GetCodeTabFromBitmap_ColRowMode(map, map.Width, map.Height);
+                                char text_read = richTextBox1.Text[sendInfo.text_read_pos - 1];
+                                if (text_read == '\n')
+                                {
+                                    // 如果当前即将发送换行符，改用特殊指令发送
+                                    byte[] temporary_buf = new byte[2];
+                                    temporary_buf[0] = ((byte)map.Width);
+                                    temporary_buf[1] = ((byte)map.Height);
+                                    Uart_Send_Raw_Info(0x04, temporary_buf);
+                                }
+                                else
+                                {
+                                    byte[] valid_buf = new byte[bit_result.Length + 4];
+                                    valid_buf[0] = ((byte)map.Width);
+                                    valid_buf[1] = ((byte)map.Height);
+                                    valid_buf[2] = ((byte)(bit_result.Length >> 8)); // first high-8-bits
+                                    valid_buf[3] = ((byte)(bit_result.Length & 0xFF)); // second low-8-bits
+                                    bit_result.CopyTo(valid_buf, 4);
+                                    Uart_Send_Raw_Info(0x03, valid_buf);
+                                }
+                                textBox3.Clear();
+                                textBox3.Text = (map.Width.ToString() + "," + map.Height.ToString() + "," + bit_result.Length.ToString());
+                            }));
                         }
-
-                        byte[] bit_result = new byte[((map.Height + 7) / 8) * map.Width];
-                        bit_result = printerClass.GetCodeTabFromBitmap_ColRowMode(map, map.Width, map.Height);
-
-                        char text_read;
-                        if (sendInfo.use_cache_buf)
-                        {
-                            text_read = sendInfo.cache_buf[sendInfo.text_read_pos - 1];
-                        }
-                        else
-                        {
-                            text_read = richTextBox1.Text[sendInfo.text_read_pos - 1];
-                        }
-                        if (text_read == '\n')
-                        {
-                            // 如果当前即将发送换行符，改用特殊指令发送
-                            byte[] temporary_buf = new byte[2];
-                            temporary_buf[0] = ((byte)map.Width);
-                            temporary_buf[1] = ((byte)map.Height);
-                            Uart_Send_Raw_Info(0x04, temporary_buf);
-                        }
-                        else
-                        {
-                            byte[] valid_buf = new byte[bit_result.Length + 4];
-                            valid_buf[0] = ((byte)map.Width);
-                            valid_buf[1] = ((byte)map.Height);
-                            valid_buf[2] = ((byte)(bit_result.Length >> 8)); // first high-8-bit
-                            valid_buf[3] = ((byte)(bit_result.Length & 0xFF)); // second low-8-bit
-                            bit_result.CopyTo(valid_buf, 4);
-                            Uart_Send_Raw_Info(0x03, valid_buf);
-                        }
-                        textBox3.Clear();
-                        textBox3.Text = (map.Width.ToString() + "," + map.Height.ToString() + "," + bit_result.Length.ToString());
                         // 发送数目自增
                         sendInfo.now_send_nums++;
-                        // 填充进度条
-                        progressBar1.Value = sendInfo.now_send_nums * 100 / sendInfo.total_send_nums;
+                        this.Invoke(new EventHandler(delegate
+                        {
+                            // 填充进度条
+                            progressBar1.Value = sendInfo.now_send_nums * 100 / sendInfo.total_send_nums;
+                        }));
                         // 结束判断
                         if (sendInfo.text_read_pos >= sendInfo.total_send_nums)
                         {
@@ -230,12 +253,14 @@ namespace TypeWriterHostApp
                     }
                     if (sendInfo.send_enable_license == false)
                     {
-                        // button1.Enabled = true; // 释放按键
-                        button6.Enabled = true; // 释放按键
-                        button7.Enabled = true; // 释放按键
-                        button1.Text = "开始打印";
-                        richTextBox1.Enabled = true; // 释放写入框
-                        /*System.Threading.Thread.CurrentThread.Abort();*/
+                        this.Invoke(new EventHandler(delegate
+                        {
+                            // button1.Enabled = true; // 释放按键
+                            button6.Enabled = true; // 释放按键
+                            button7.Enabled = true; // 释放按键
+                            button1.Text = "开始打印";
+                            richTextBox1.Enabled = true; // 释放写入框
+                        }));
                     }
                 }
                 else
@@ -257,14 +282,34 @@ namespace TypeWriterHostApp
                 //因为要访问UI资源，所以需要使用invoke方式同步ui
                 this.Invoke((EventHandler)(delegate
                 {
-                    string rxbuf = serialPort1.ReadExisting();
-                    if (rxbuf.Length == 1)
+                    int rx_length = serialPort1.BytesToRead;
+                    byte[] rxbuf = new byte[rx_length];
+                    if (rx_length == 0)
                     {
-                        if (rxbuf[0] == '1')
+                        return;
+                    }
+                    serialPort1.Read(rxbuf, 0, rx_length);
+
+                    bool retval = protocol_Logic.Rec_Protocol_Analysis(rxbuf);
+                    if (retval)
+                    {
+                        switch (protocol_Logic.recInfo.protocal.cmd)
                         {
-                            sendInfo.send_ack_flag = true;
+                            case (byte)SalveCommandEnumDef.__cmd_one_step_ack:
+                                sendInfo.send_ack_flag = true;
+                                break;
+
+                            case (byte)SalveCommandEnumDef.__cmd_temper_update:
+                                int temp_raw_val = protocol_Logic.recInfo.protocal.valid_data[0] * 256 + protocol_Logic.recInfo.protocal.valid_data[1];
+                                // 计算出温度电阻的阻值，单位kΩ
+                                double temp_res = 51 * temp_raw_val / (4096 - temp_raw_val);
+                                double real_temp = -22.08 * System.Math.Log(temp_res) + 103.22;
+                                toolStripLabel1.Text = "温度：" + real_temp.ToString();
+                                break;
                         }
                     }
+
+
                 }
                     )
                 );
@@ -353,6 +398,7 @@ namespace TypeWriterHostApp
             {
                 System.Drawing.Font font = new System.Drawing.Font(font_choose.Font.FontFamily, font_choose.Font.Size, font_choose.Font.Style);
                 richTextBox1.Font = font;
+
             }
         }
 
@@ -520,7 +566,7 @@ namespace TypeWriterHostApp
         private void ToolStripMenuItem1_2_Click(object sender, EventArgs e)
         {
             // 复制
-            if(richTextBox1.SelectedText.Length != 0)
+            if (richTextBox1.SelectedText.Length != 0)
             {
                 Clipboard.SetDataObject(richTextBox1.SelectedText);
             }
@@ -550,7 +596,7 @@ namespace TypeWriterHostApp
         private void contextMenuStrip1_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
             // 判断是否启用剪切、复制、粘贴、字体操作
-            if(richTextBox1.SelectedText.Length == 0)
+            if (richTextBox1.SelectedText.Length == 0)
             {
                 ToolStripMenuItem1_1.Enabled = false;
                 ToolStripMenuItem1_2.Enabled = false;

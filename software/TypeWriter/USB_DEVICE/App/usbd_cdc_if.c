@@ -133,8 +133,8 @@ extern osMessageQueueId_t usblinkRxRequestQueueHandle;
 
 static int8_t CDC_Init_FS(void);
 static int8_t CDC_DeInit_FS(void);
-static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length);
-static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
+static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length);
+static int8_t CDC_Receive_FS(uint8_t *pbuf, uint32_t *Len);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
 
@@ -145,12 +145,11 @@ static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
   */
 
 USBD_CDC_ItfTypeDef USBD_Interface_fops_FS =
-{
-  CDC_Init_FS,
-  CDC_DeInit_FS,
-  CDC_Control_FS,
-  CDC_Receive_FS
-};
+    {
+        CDC_Init_FS,
+        CDC_DeInit_FS,
+        CDC_Control_FS,
+        CDC_Receive_FS};
 
 /* Private functions ---------------------------------------------------------*/
 /**
@@ -193,7 +192,7 @@ static int8_t CDC_DeInit_FS(void)
   * @param  length: Number of data to be sent (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
+static int8_t CDC_Control_FS(uint8_t cmd, uint8_t *pbuf, uint16_t length)
 {
   /* USER CODE BEGIN 5 */
   switch (cmd)
@@ -274,7 +273,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
+static int8_t CDC_Receive_FS(uint8_t *Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
@@ -418,7 +417,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   * @param  Len: Number of data to be sent (in bytes)
   * @retval USBD_OK if all operations are OK else USBD_FAIL or USBD_BUSY
   */
-uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
+uint8_t CDC_Transmit_FS(uint8_t *Buf, uint16_t Len)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 7 */
@@ -434,6 +433,58 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
+
+/**
+  * @brief  send frame
+  * @retval 0: success, -1: usb-tx-cache full
+  */
+int8_t usb_send_frame(uint8_t cmd, uint16_t valid_length, uint8_t *valid_data_buf)
+{
+  if (usblinkMessage.tx.length + FRAME_STRUCTURE_CODE_LENGTH + valid_length > APP_TX_DATA_SIZE)
+  {
+    // 缓存已满，无法发送
+    return -1;
+  }
+  uint8_t frame_head_list[4]; // head + length_h8bits + length_l8bits + cmd
+  uint8_t frame_tail_list[2]; // sum_check + tail
+  frame_head_list[0] = FRAME_HEAD_CODE;
+  frame_head_list[1] = valid_length >> 8;
+  frame_head_list[2] = valid_length & 0xFF;
+  frame_head_list[3] = cmd;
+  usb_send_string(4, frame_head_list);
+  usb_send_string(valid_length, valid_data_buf);
+  uint8_t sum_check = cmd;
+  for (uint16_t i = 0; i < valid_length; i++)
+  {
+    sum_check += valid_data_buf[i];
+  }
+  frame_tail_list[0] = sum_check;
+  frame_tail_list[1] = FRAME_TAIL_CODE;
+  usb_send_string(2, frame_tail_list);
+  return 0;
+}
+
+/**
+  * @brief  usb-virtual-com's sendbuf with unblocking
+  * @retval 0: success, 1: buf empty, -1: usb-tx-cache full
+  */
+int8_t usb_send_string(uint16_t length, uint8_t *buf)
+{
+  if (length == 0)
+  {
+    return 1;
+  }
+  if (usblinkMessage.tx.length + length <= APP_TX_DATA_SIZE)
+  {
+    memcpy((char *)(usblinkMessage.tx.info + usblinkMessage.tx.length), buf, length * sizeof(uint8_t));
+    usblinkMessage.tx.length += length;
+  }
+  else
+  {
+    return -1;
+  }
+  return 0;
+}
 
 /**
   * @brief  usb-virtual-com's printf with unblocking

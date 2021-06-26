@@ -179,7 +179,12 @@ void peripheralStartTask(void *argument)
   /* Infinite loop */
   for (;;)
   {
-
+    // uint16_t adc_val = HAL_ADC_GetValue(&hadc1);
+    // // uint16_t adc_val = 1000;
+    // uint8_t buf[2];
+    // buf[0] = adc_val >> 8;
+    // buf[1] = adc_val & 0xFF;
+    // usb_send_frame(_cmd_temper_update, 2, buf);
     osDelay(1000);
   }
   /* USER CODE END peripheralStartTask */
@@ -249,7 +254,7 @@ void usblinkRxStartTask(void *argument)
             printer_write_single_char(hostComProtocol.info.valid_data[i]);
           }
         }
-        usb_printf("1");
+        usb_send_frame(_cmd_one_step_ack, 0, 0);
         break;
       }
 
@@ -262,7 +267,7 @@ void usblinkRxStartTask(void *argument)
         image_text.buf.val = hostComProtocol.info.valid_data + 4;
         printer_write_image_text(image_text);
         // osDelay(50);
-        usb_printf("1");
+        usb_send_frame(_cmd_one_step_ack, 0, 0);
         break;
       }
 
@@ -271,7 +276,7 @@ void usblinkRxStartTask(void *argument)
         uint8_t height;
         height = hostComProtocol.info.valid_data[1]; // 只取高度信息
         printer_new_lines(height, 1);
-        usb_printf("1");
+        usb_send_frame(_cmd_one_step_ack, 0, 0);
         break;
       }
 
@@ -308,11 +313,20 @@ void inoutDeviceStartTask(void *argument)
     if (val == KEY_SIGNAL_RELEASE)
     {
       HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
-      HAL_GPIO_TogglePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin);
+      // HAL_GPIO_TogglePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin);
       // usb_printf("%d %d", *FONT_CHAR_RASTERS[0], *FONT_CHAR_RASTERS[1]);
 
+      // usb_send_frame(_cmd_one_step_ack, 0, 0);
+
       uint16_t adc_val = HAL_ADC_GetValue(&hadc1);
-      usb_printf("adc: %d - %.1lfv\r\n", adc_val, adc_val * 3.3 / 4096);
+      // uint16_t adc_val = 1000;
+      uint8_t buf[2];
+      buf[0] = adc_val >> 8;
+      buf[1] = adc_val & 0xFF;
+      usb_send_frame(_cmd_temper_update, 2, buf);
+
+      //      uint16_t adc_val = HAL_ADC_GetValue(&hadc1);
+      //      usb_printf("adc: %d - %.1lfv\r\n", adc_val, adc_val * 3.3 / 4096);
     }
     val = key_scan_signal(1, HAL_GPIO_ReadPin(USER_KEY2_GPIO_Port, USER_KEY2_Pin));
     //    if (val == KEY_SIGNAL_RELEASE)

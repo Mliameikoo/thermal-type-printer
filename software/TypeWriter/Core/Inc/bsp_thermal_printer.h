@@ -16,6 +16,11 @@ enum hostCommandDef
     _cmd_special_order = 0x04,
     _cmd_change_offset = 0x05,
 };
+enum salveCommandDef
+{
+    _cmd_one_step_ack = 0x80,
+    _cmd_temper_update,
+};
 enum textSetAlignDef
 {
     _alignLeft = 0u,

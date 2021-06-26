@@ -59,6 +59,8 @@ namespace TypeWriterHostApp
             this.toolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.toolStripMenuItem3 = new System.Windows.Forms.ToolStripMenuItem();
             this.ToolStripMenuItem_Options_4 = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
+            this.toolStripLabel1 = new System.Windows.Forms.ToolStripLabel();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.panel1 = new System.Windows.Forms.Panel();
@@ -87,7 +89,7 @@ namespace TypeWriterHostApp
             this.button1.Cursor = System.Windows.Forms.Cursors.Hand;
             this.button1.Dock = System.Windows.Forms.DockStyle.Right;
             this.button1.Font = new System.Drawing.Font("幼圆", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.button1.Location = new System.Drawing.Point(102, 0);
+            this.button1.Location = new System.Drawing.Point(103, 0);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(158, 45);
             this.button1.TabIndex = 0;
@@ -107,7 +109,7 @@ namespace TypeWriterHostApp
             this.richTextBox1.Font = new System.Drawing.Font("宋体", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.richTextBox1.Location = new System.Drawing.Point(0, 0);
             this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.Size = new System.Drawing.Size(261, 236);
+            this.richTextBox1.Size = new System.Drawing.Size(261, 254);
             this.richTextBox1.TabIndex = 2;
             this.richTextBox1.Text = "";
             this.richTextBox1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.richTextBox1_KeyDown);
@@ -201,11 +203,17 @@ namespace TypeWriterHostApp
             // 
             // toolStrip1
             // 
+            this.toolStrip1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.toolStrip1.Dock = System.Windows.Forms.DockStyle.None;
             this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripSplitButton1});
+            this.toolStripSplitButton1,
+            this.toolStripSeparator5,
+            this.toolStripLabel1});
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(284, 25);
+            this.toolStrip1.Padding = new System.Windows.Forms.Padding(0);
+            this.toolStrip1.Size = new System.Drawing.Size(173, 25);
             this.toolStrip1.TabIndex = 7;
             this.toolStrip1.Text = "toolStrip1";
             // 
@@ -229,7 +237,7 @@ namespace TypeWriterHostApp
             this.ToolStripMenuItem_1,
             this.ToolStripMenuItem_2});
             this.ToolStripMenuItem_Options_1.Name = "ToolStripMenuItem_Options_1";
-            this.ToolStripMenuItem_Options_1.Size = new System.Drawing.Size(124, 22);
+            this.ToolStripMenuItem_Options_1.Size = new System.Drawing.Size(180, 22);
             this.ToolStripMenuItem_Options_1.Text = "打印模式";
             // 
             // ToolStripMenuItem_1
@@ -253,7 +261,7 @@ namespace TypeWriterHostApp
             this.toolStripSeparator1,
             this.toolStripMenuItem2});
             this.ToolStripMenuItem_Options_2.Name = "ToolStripMenuItem_Options_2";
-            this.ToolStripMenuItem_Options_2.Size = new System.Drawing.Size(124, 22);
+            this.ToolStripMenuItem_Options_2.Size = new System.Drawing.Size(180, 22);
             this.ToolStripMenuItem_Options_2.Text = "设置偏移";
             // 
             // toolStripMenuItem1
@@ -283,7 +291,7 @@ namespace TypeWriterHostApp
             this.toolStripSeparator4,
             this.toolStripMenuItem3});
             this.toolStripMenuItem_Options_3.Name = "toolStripMenuItem_Options_3";
-            this.toolStripMenuItem_Options_3.Size = new System.Drawing.Size(124, 22);
+            this.toolStripMenuItem_Options_3.Size = new System.Drawing.Size(180, 22);
             this.toolStripMenuItem_Options_3.Text = "设置缩放";
             // 
             // toolStripTextBox1
@@ -307,8 +315,19 @@ namespace TypeWriterHostApp
             // ToolStripMenuItem_Options_4
             // 
             this.ToolStripMenuItem_Options_4.Name = "ToolStripMenuItem_Options_4";
-            this.ToolStripMenuItem_Options_4.Size = new System.Drawing.Size(124, 22);
+            this.ToolStripMenuItem_Options_4.Size = new System.Drawing.Size(180, 22);
             this.ToolStripMenuItem_Options_4.Text = "Help";
+            // 
+            // toolStripSeparator5
+            // 
+            this.toolStripSeparator5.Name = "toolStripSeparator5";
+            this.toolStripSeparator5.Size = new System.Drawing.Size(6, 25);
+            // 
+            // toolStripLabel1
+            // 
+            this.toolStripLabel1.Name = "toolStripLabel1";
+            this.toolStripLabel1.Size = new System.Drawing.Size(58, 22);
+            this.toolStripLabel1.Text = "温度：61";
             // 
             // textBox1
             // 
@@ -341,9 +360,9 @@ namespace TypeWriterHostApp
             this.panel1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.panel1.Controls.Add(this.button7);
             this.panel1.Controls.Add(this.button1);
-            this.panel1.Location = new System.Drawing.Point(11, 366);
+            this.panel1.Location = new System.Drawing.Point(11, 384);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(260, 45);
+            this.panel1.Size = new System.Drawing.Size(261, 45);
             this.panel1.TabIndex = 8;
             // 
             // button7
@@ -367,7 +386,7 @@ namespace TypeWriterHostApp
             this.panel2.Controls.Add(this.richTextBox1);
             this.panel2.Location = new System.Drawing.Point(11, 98);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(261, 236);
+            this.panel2.Size = new System.Drawing.Size(261, 254);
             this.panel2.TabIndex = 9;
             // 
             // panel3
@@ -468,7 +487,7 @@ namespace TypeWriterHostApp
             this.panel5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel5.Controls.Add(this.progressBar1);
-            this.panel5.Location = new System.Drawing.Point(11, 340);
+            this.panel5.Location = new System.Drawing.Point(11, 358);
             this.panel5.Name = "panel5";
             this.panel5.Size = new System.Drawing.Size(261, 20);
             this.panel5.TabIndex = 12;
@@ -486,7 +505,7 @@ namespace TypeWriterHostApp
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(284, 423);
+            this.ClientSize = new System.Drawing.Size(284, 441);
             this.Controls.Add(this.panel5);
             this.Controls.Add(this.panel2);
             this.Controls.Add(this.panel1);
@@ -555,6 +574,8 @@ namespace TypeWriterHostApp
         private System.Windows.Forms.ToolStripTextBox toolStripTextBox1;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripMenuItem toolStripMenuItem3;
+        private System.Windows.Forms.ToolStripLabel toolStripLabel1;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
     }
 }
 
