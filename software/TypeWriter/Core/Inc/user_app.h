@@ -11,7 +11,7 @@
 #include "adc.h"
 /* Private defines -----------------------------------------------------------*/
 //#define USBLINK_MESSAGE_INFO_MAX_LENGTH 20
-#define ADC_RAW_DATA_DEPTH 32 // ADC采样深度
+#define ADC_RAW_DATA_DEPTH 16 // ADC采样深度
 #define ADC_CHANNEL_NUMS 1    // ADC采样通道数
 /* Exported types ------------------------------------------------------------*/
 
@@ -22,6 +22,7 @@ extern uint16_t adc_raw_data[ADC_RAW_DATA_DEPTH][ADC_CHANNEL_NUMS];
 
 uint8_t USER_SYS_Init(void);
 void usb_analog_plug(void);
+uint16_t adc_get_filter_value(void);
 
 void step(uint8_t direction);
 void idle(void);

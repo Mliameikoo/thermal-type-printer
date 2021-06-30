@@ -21,7 +21,6 @@ uint16_t adc_raw_data[ADC_RAW_DATA_DEPTH][ADC_CHANNEL_NUMS] = {0}; /* raw adc-va
 uint8_t USER_SYS_Init(void)
 {
 	uint8_t retval = 0;
-
 	/* ADC校准 */
 	HAL_ADCEx_Calibration_Start(&hadc1);
 
@@ -39,6 +38,7 @@ uint8_t USER_SYS_Init(void)
 	HAL_NVIC_SetPriority(TIM4_IRQn, 5, 3);
 	HAL_NVIC_EnableIRQ(TIM4_IRQn);
 	HAL_TIM_Base_Start_IT(&htim4);
+
 	isSysInitOver = true;
 	return retval;
 }
@@ -65,6 +65,16 @@ void usb_analog_plug(void)
 	// 先把PA12拉低再拉高，利用D+模拟USB的拔插动作
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_SET);
 	HAL_Delay(65);
+}
+
+uint16_t adc_get_filter_value(void)
+{
+	uint32_t sum = 0;
+	for (uint8_t i = 0; i < ADC_RAW_DATA_DEPTH; i++)
+	{
+		sum += adc_raw_data[i][0];
+	}
+	return sum / ADC_RAW_DATA_DEPTH;
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -20,7 +20,9 @@ namespace TypeWriterHostApp
     public struct MessageSendInfoTypeDef
     {
         public bool use_cache_buf;              // 是否不使用richTextBox内容而使用临时缓存内容进行发送
-        public string cache_buf;                    // 临时缓存内容
+        public byte[] cache_buf;                    // 临时缓存内容
+        public byte cmd;
+
         public int total_send_nums;               // 本轮总共需要发送的数目
         public int now_send_nums;               // 本轮发送中当前已发送的数目
         public bool send_enable_license;    // 是否启动发送
@@ -123,7 +125,7 @@ namespace TypeWriterHostApp
             }
             else
             {
-                sendInfo.total_send_nums = sendInfo.cache_buf.Length;
+                sendInfo.total_send_nums = 1; // 发送一轮即可
             }
             sendInfo.now_send_nums = 0;                             // 已发送的字符个数
             sendInfo.send_enable_license = true;                    // 开启发送
@@ -131,7 +133,9 @@ namespace TypeWriterHostApp
         private void uartSend_Cancel()
         {
             progressBar1.Value = 0;                                 // 清空进度条
-            sendInfo.send_enable_license = false;                   // 关闭发送
+            sendInfo.use_cache_buf = false;                     // 置位
+            sendInfo.text_read_pos = sendInfo.total_send_nums = 0;
+            sendInfo.send_enable_license = false;            // 关闭发送
         }
 
         private void null_text_error_handle()
@@ -178,32 +182,43 @@ namespace TypeWriterHostApp
                         Bitmap map;
                         if (sendInfo.use_cache_buf)
                         {
-                            map = printerClass.GetStrImage(sendInfo.cache_buf[sendInfo.text_read_pos++].ToString(), new Font(richTextBox1.Font.FontFamily, richTextBox1.Font.Size, richTextBox1.Font.Style));
-                            byte[] bit_result = new byte[((map.Height + 7) / 8) * map.Width];
-                            bit_result = printerClass.GetCodeTabFromBitmap_ColRowMode(map, map.Width, map.Height);
-                            char text_read = sendInfo.cache_buf[sendInfo.text_read_pos - 1];
-                            if (text_read == '\n')
+                            Size size = printerClass.GetStrFontSize(new Font(richTextBox1.Font.FontFamily, richTextBox1.Font.Size, richTextBox1.Font.Style));
+                            byte[] temporary_buf;
+
+                            switch (sendInfo.cmd)
                             {
-                                // 如果当前即将发送换行符，改用特殊指令发送
-                                byte[] temporary_buf = new byte[2];
-                                temporary_buf[0] = ((byte)map.Width);
-                                temporary_buf[1] = ((byte)map.Height);
-                                Uart_Send_Raw_Info(0x04, temporary_buf);
+                                case 0x04:
+                                    // 发送换行符
+                                    temporary_buf = new byte[2];
+                                    temporary_buf[0] = ((byte)size.Width);
+                                    temporary_buf[1] = ((byte)size.Height);
+                                    Uart_Send_Raw_Info(sendInfo.cmd, temporary_buf);
+                                    break;
+
+                                case 0x05:
+                                    // 发送缩放值
+                                    temporary_buf = new byte[2];
+                                    temporary_buf[0] = ((byte)0); // 正值
+                                    temporary_buf[1] = ((byte)(toolStripTextBox1.Text[0] - '0'));
+                                    Uart_Send_Raw_Info(sendInfo.cmd, temporary_buf);
+                                    break;
+
+                                case 0x06:
+                                    // 发送偏移值
+                                    int offset = Convert.ToInt32(toolStripMenuItem1.Text);
+                                    temporary_buf = new byte[2];
+                                    temporary_buf[0] = ((byte)((offset < 0) ? 1 : 0)); // 正负值：1为负，0为非负
+                                    temporary_buf[1] = ((byte)System.Math.Abs(offset)); // 取值范围-250~250
+                                    Uart_Send_Raw_Info(sendInfo.cmd, temporary_buf);
+                                    break;
                             }
-                            else
-                            {
-                                byte[] valid_buf = new byte[bit_result.Length + 4];
-                                valid_buf[0] = ((byte)map.Width);
-                                valid_buf[1] = ((byte)map.Height);
-                                valid_buf[2] = ((byte)(bit_result.Length >> 8)); // first high-8-bit
-                                valid_buf[3] = ((byte)(bit_result.Length & 0xFF)); // second low-8-bit
-                                bit_result.CopyTo(valid_buf, 4);
-                                Uart_Send_Raw_Info(0x03, valid_buf);
-                            }
+
+                            sendInfo.text_read_pos++;
+
                             this.Invoke(new EventHandler(delegate
                             {
                                 textBox3.Clear();
-                                textBox3.Text = (map.Width.ToString() + "," + map.Height.ToString() + "," + bit_result.Length.ToString());
+                                textBox3.Text = (size.Width.ToString() + "," + size.Height.ToString());
                             }));
                         }
                         else
@@ -304,7 +319,9 @@ namespace TypeWriterHostApp
                                 // 计算出温度电阻的阻值，单位kΩ
                                 double temp_res = 51 * temp_raw_val / (4096 - temp_raw_val);
                                 double real_temp = -22.08 * System.Math.Log(temp_res) + 103.22;
-                                toolStripLabel1.Text = "温度：" + real_temp.ToString();
+                                toolStripLabel1.Text = "温度：" + real_temp.ToString("f0");
+                                toolStripLabel1.ToolTipText = "上次更新时间：" + DateTime.Now.ToLongTimeString().ToString();
+
                                 break;
                         }
                     }
@@ -318,7 +335,7 @@ namespace TypeWriterHostApp
             {
                 //响铃并显示异常给用户
                 System.Media.SystemSounds.Beep.Play();
-                MessageBox.Show(ex.Message);
+                MessageBox.Show(ex.Message, "端口异常", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -398,7 +415,6 @@ namespace TypeWriterHostApp
             {
                 System.Drawing.Font font = new System.Drawing.Font(font_choose.Font.FontFamily, font_choose.Font.Size, font_choose.Font.Style);
                 richTextBox1.Font = font;
-
             }
         }
 
@@ -433,16 +449,6 @@ namespace TypeWriterHostApp
             ToolStripMenuItem_2.Checked = true;
             richTextBox1.Clear();
             button1.Enabled = true;
-        }
-
-        private void toolStripMenuItem2_Click(object sender, EventArgs e)
-        {
-            if (!sendInfo.send_enable_license)
-            {
-                byte[] byte_buf = new byte[3];
-                byte_buf[0] = ((byte)richTextBox1.Text[richTextBox1.Text.Length - 1]);
-                Uart_Send_Raw_Info(0x05, byte_buf);
-            }
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -535,8 +541,8 @@ namespace TypeWriterHostApp
         private void button7_Click(object sender, EventArgs e)
         {
             // 快速换行按钮
-            sendInfo.cache_buf = "\n";
             sendInfo.use_cache_buf = true;
+            sendInfo.cmd = 0x04;
             uartSend_Get_Ready();
         }
 
@@ -610,5 +616,75 @@ namespace TypeWriterHostApp
             }
         }
 
+        private void toolStripMenuItem2_Click(object sender, EventArgs e)
+        {
+            // 更新偏移值按钮
+            if (toolStripMenuItem1.Text.Length != 0)
+            {
+                int offset = Convert.ToInt32(toolStripMenuItem1.Text);
+                if (System.Math.Abs(offset) < 250)
+                {
+                    if (!sendInfo.send_enable_license)
+                    {
+                        sendInfo.use_cache_buf = true;
+                        sendInfo.cmd = 0x06;
+                        uartSend_Get_Ready();
+                        MessageBox.Show("设置成功", "使用提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("发送正忙，请稍后重试", "使用提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("偏移值过大，请设置在-250~250范围内", "使用提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            else
+            {
+                MessageBox.Show("请输入有效值", "使用提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void toolStripMenuItem3_Click(object sender, EventArgs e)
+        {
+            // 更新缩放值按钮
+            if (toolStripTextBox1.Text.Length != 0)
+            {
+                int scale = toolStripTextBox1.Text[0] - '0';
+                if (scale == 1 || scale == 2)
+                {
+                    if (!sendInfo.send_enable_license)
+                    {
+                        sendInfo.use_cache_buf = true;
+                        sendInfo.cmd = 0x05;
+                        uartSend_Get_Ready();
+                        MessageBox.Show("设置成功", "使用提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        MessageBox.Show("发送正忙，请稍后重试", "使用提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("暂时只支持x1，x2倍比例放大", "使用提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+            else
+            {
+                MessageBox.Show("请输入有效值", "使用提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ToolStripMenuItem_Options_4_Click(object sender, EventArgs e)
+        {
+            // help
+            MessageBox.Show("Software Version: 1.0.0\r\n" +
+                "Adapted Hardware Version: 1.0.0\r\n" +
+                "Any Questions Please Contact \"jadechen_y@qq.com\"" +"\r\n\r\n"+
+                "                                                                           —— To CC", "Help", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
     }
 }

@@ -52,13 +52,16 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
+static uint16_t adc_val;
+static uint8_t buf[2] = {0};
+
 /* USER CODE END Variables */
 /* Definitions for peripheralTask */
 osThreadId_t peripheralTaskHandle;
 const osThreadAttr_t peripheralTask_attributes = {
     .name = "peripheralTask",
     .stack_size = 64 * 4,
-    .priority = (osPriority_t)osPriorityNormal,
+    .priority = (osPriority_t)osPriorityBelowNormal,
 };
 /* Definitions for usblinkTxTask */
 osThreadId_t usblinkTxTaskHandle;
@@ -71,24 +74,20 @@ const osThreadAttr_t usblinkTxTask_attributes = {
 osThreadId_t usblinkRxTaskHandle;
 const osThreadAttr_t usblinkRxTask_attributes = {
     .name = "usblinkRxTask",
-    .stack_size = 300 * 4,
+    .stack_size = 200 * 4,
     .priority = (osPriority_t)osPriorityLow,
 };
 /* Definitions for inoutDeviceTask */
 osThreadId_t inoutDeviceTaskHandle;
 const osThreadAttr_t inoutDeviceTask_attributes = {
     .name = "inoutDeviceTask",
-    .stack_size = 150 * 4,
+    .stack_size = 200 * 4,
     .priority = (osPriority_t)osPriorityBelowNormal,
 };
 /* Definitions for usblinkRxRequestQueue */
 osMessageQueueId_t usblinkRxRequestQueueHandle;
 const osMessageQueueAttr_t usblinkRxRequestQueue_attributes = {
     .name = "usblinkRxRequestQueue"};
-/* Definitions for usblinkRecEvent */
-osEventFlagsId_t usblinkRecEventHandle;
-const osEventFlagsAttr_t usblinkRecEvent_attributes = {
-    .name = "usblinkRecEvent"};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -151,10 +150,6 @@ void MX_FREERTOS_Init(void)
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
-  /* Create the event(s) */
-  /* creation of usblinkRecEvent */
-  usblinkRecEventHandle = osEventFlagsNew(&usblinkRecEvent_attributes);
-
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
@@ -172,19 +167,20 @@ void peripheralStartTask(void *argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN peripheralStartTask */
-  PRINTER_POWER_ON();
-  osDelay(20);
-  printer_init();
-  PRINTER_POWER_OFF();
+  while (!isSysInitOver)
+    ;
+
+  while (!usblinkMessage.is_cdc_init_ok)
+    ; // 等待usb枚举成功才可进行发送
+
   /* Infinite loop */
   for (;;)
   {
-    // uint16_t adc_val = HAL_ADC_GetValue(&hadc1);
-    // // uint16_t adc_val = 1000;
-    // uint8_t buf[2];
-    // buf[0] = adc_val >> 8;
-    // buf[1] = adc_val & 0xFF;
-    // usb_send_frame(_cmd_temper_update, 2, buf);
+    adc_val = adc_get_filter_value();
+    buf[0] = adc_val >> 8;
+    buf[1] = adc_val & 0xFF;
+    usb_send_frame(_cmd_temper_update, 2, buf);
+
     osDelay(1000);
   }
   /* USER CODE END peripheralStartTask */
@@ -265,7 +261,9 @@ void usblinkRxStartTask(void *argument)
         image_text.height = hostComProtocol.info.valid_data[1];
         image_text.buf.length = hostComProtocol.info.valid_data[2] * 256 + hostComProtocol.info.valid_data[3];
         image_text.buf.val = hostComProtocol.info.valid_data + 4;
+        HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
         printer_write_image_text(image_text);
+        HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
         // osDelay(50);
         usb_send_frame(_cmd_one_step_ack, 0, 0);
         break;
@@ -280,9 +278,22 @@ void usblinkRxStartTask(void *argument)
         break;
       }
 
+      case _cmd_change_scale:
+      {
+        uint8_t scale;
+        scale = hostComProtocol.info.valid_data[1]; // 只取[1]位信息，[0]空闲
+        printer_change_char_scale(scale);
+        break;
+      }
+
       case _cmd_change_offset:
       {
-
+        int8_t offset_sign = 1;
+        if (hostComProtocol.info.valid_data[0])
+        {
+          offset_sign = -1;
+        }
+        printerInfo.height_offset = offset_sign * hostComProtocol.info.valid_data[1];
         break;
       }
       }
@@ -305,6 +316,15 @@ void inoutDeviceStartTask(void *argument)
   while (!isSysInitOver)
     ;
 
+  // start adc-dma
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t *)&adc_raw_data, ADC_RAW_DATA_DEPTH * ADC_CHANNEL_NUMS);
+
+  // printer init
+  PRINTER_POWER_ON();
+  osDelay(20);
+  printer_init();
+  PRINTER_POWER_OFF();
+
   /* Infinite loop */
   for (;;)
   {
@@ -312,21 +332,9 @@ void inoutDeviceStartTask(void *argument)
     val = key_scan_signal(0, HAL_GPIO_ReadPin(USER_KEY1_GPIO_Port, USER_KEY1_Pin));
     if (val == KEY_SIGNAL_RELEASE)
     {
-      HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
+      printer_new_lines(printerInfo.line_height, -1);
+      // HAL_GPIO_TogglePin(USER_LED_B_GPIO_Port, USER_LED_B_Pin);
       // HAL_GPIO_TogglePin(PRN_POWER_GPIO_Port, PRN_POWER_Pin);
-      // usb_printf("%d %d", *FONT_CHAR_RASTERS[0], *FONT_CHAR_RASTERS[1]);
-
-      // usb_send_frame(_cmd_one_step_ack, 0, 0);
-
-      uint16_t adc_val = HAL_ADC_GetValue(&hadc1);
-      // uint16_t adc_val = 1000;
-      uint8_t buf[2];
-      buf[0] = adc_val >> 8;
-      buf[1] = adc_val & 0xFF;
-      usb_send_frame(_cmd_temper_update, 2, buf);
-
-      //      uint16_t adc_val = HAL_ADC_GetValue(&hadc1);
-      //      usb_printf("adc: %d - %.1lfv\r\n", adc_val, adc_val * 3.3 / 4096);
     }
     val = key_scan_signal(1, HAL_GPIO_ReadPin(USER_KEY2_GPIO_Port, USER_KEY2_Pin));
     //    if (val == KEY_SIGNAL_RELEASE)
@@ -337,7 +345,8 @@ void inoutDeviceStartTask(void *argument)
     {
       printer_new_lines(printerInfo.line_height, 1);
     }
-    osDelay(5);
+
+    osDelay(10);
   }
   /* USER CODE END inoutDeviceStartTask */
 }

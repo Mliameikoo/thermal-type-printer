@@ -36,6 +36,14 @@ namespace TypeWriterHostApp
             }
         }
 
+        public Size GetStrFontSize(Font font)
+        {
+            string hz = "1";
+            var flags = TextFormatFlags.WordBreak | TextFormatFlags.NoPadding;
+            Size size = System.Windows.Forms.TextRenderer.MeasureText(hz, font, new Size(0, 0), flags);
+            return size;
+        }
+
         //获取字符串图片
         public Bitmap GetStrImage(string hz, Font font)
         {

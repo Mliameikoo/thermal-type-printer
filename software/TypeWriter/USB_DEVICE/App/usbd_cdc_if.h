@@ -57,7 +57,7 @@ extern "C"
 
 #define FRAME_HEAD_CODE 0xF5
 #define FRAME_TAIL_CODE 0x5F
-#define FRAME_STRUCTURE_CODE_LENGTH 6 // 一个完整帧中除去valid_data剩余部分的长度
+#define FRAME_STRUCTURE_CODE_LENGTH 6 // �?个完整帧中除去valid_data剩余部分的长�?
 
   /* USER CODE END EXPORTED_DEFINES */
 
@@ -96,6 +96,7 @@ extern "C"
       uint8_t *info;
       uint16_t length;
     } rx;
+    uint8_t is_cdc_init_ok;
   };
 
   struct hostComProtocolDef
@@ -157,8 +158,8 @@ extern "C"
   /* USER CODE BEGIN EXPORTED_FUNCTIONS */
 
   int8_t usb_printf(char *fmt, ...);
-  int8_t usb_send_string(uint16_t length, uint8_t *buf);
-  int8_t usb_send_frame(uint8_t cmd, uint16_t valid_length, uint8_t *valid_data_buf);
+  int8_t usb_send_string(const uint16_t length, const uint8_t *buf);
+  int8_t usb_send_frame(const uint8_t cmd, const uint16_t valid_length, const uint8_t *valid_data_buf);
 
   /* USER CODE END EXPORTED_FUNCTIONS */
 

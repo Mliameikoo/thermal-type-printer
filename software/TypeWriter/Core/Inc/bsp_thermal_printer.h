@@ -6,15 +6,16 @@
 /* Private includes ----------------------------------------------------------*/
 
 /* Private defines -----------------------------------------------------------*/
-#define TRANSMIT_IMAGE_BUF_MAX_LENGTH 500 // 传输图像的有效字节长度
+// #define TRANSMIT_IMAGE_BUF_MAX_LENGTH 500 // 传输图像的有效字节长度
 /* Exported types ------------------------------------------------------------*/
 enum hostCommandDef
 {
     _cmd_single_word_write = 0x01,
-    _cmd_paragraph_write = 0x02,
+    _cmd_paragraph_write = 0x02, // unused
     _cmd_image_text_write = 0x03,
-    _cmd_special_order = 0x04,
-    _cmd_change_offset = 0x05,
+    _cmd_special_order = 0x04, // use for newlines
+    _cmd_change_scale = 0x05,
+    _cmd_change_offset = 0x06,
 };
 enum salveCommandDef
 {

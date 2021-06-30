@@ -183,6 +183,7 @@ namespace TypeWriterHostApp
             this.button2.Size = new System.Drawing.Size(75, 23);
             this.button2.TabIndex = 3;
             this.button2.Text = "选择字体";
+            this.toolTip1.SetToolTip(this.button2, "对文本框全文进行字体修改。\r\n若需要对部分内容进行单独修改，请选择内容后右键进行修改。");
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
@@ -213,7 +214,7 @@ namespace TypeWriterHostApp
             this.toolStrip1.Location = new System.Drawing.Point(0, 0);
             this.toolStrip1.Name = "toolStrip1";
             this.toolStrip1.Padding = new System.Windows.Forms.Padding(0);
-            this.toolStrip1.Size = new System.Drawing.Size(173, 25);
+            this.toolStrip1.Size = new System.Drawing.Size(170, 25);
             this.toolStrip1.TabIndex = 7;
             this.toolStrip1.Text = "toolStrip1";
             // 
@@ -243,15 +244,17 @@ namespace TypeWriterHostApp
             // ToolStripMenuItem_1
             // 
             this.ToolStripMenuItem_1.Name = "ToolStripMenuItem_1";
-            this.ToolStripMenuItem_1.Size = new System.Drawing.Size(148, 22);
+            this.ToolStripMenuItem_1.Size = new System.Drawing.Size(180, 22);
             this.ToolStripMenuItem_1.Text = "模拟键盘模式";
+            this.ToolStripMenuItem_1.ToolTipText = "模拟实现打字机功能，暂不支持输出中文。\r\n支持退格功能，以黑块覆盖退格内容。\r\n使用前请注意切换为正确的输入法。";
             this.ToolStripMenuItem_1.Click += new System.EventHandler(this.ToolStripMenuItem_1_Click);
             // 
             // ToolStripMenuItem_2
             // 
             this.ToolStripMenuItem_2.Name = "ToolStripMenuItem_2";
-            this.ToolStripMenuItem_2.Size = new System.Drawing.Size(148, 22);
-            this.ToolStripMenuItem_2.Text = "中文输入模式";
+            this.ToolStripMenuItem_2.Size = new System.Drawing.Size(180, 22);
+            this.ToolStripMenuItem_2.Text = "中英文输入模式";
+            this.ToolStripMenuItem_2.ToolTipText = "支持全字体输入。";
             this.ToolStripMenuItem_2.Click += new System.EventHandler(this.ToolStripMenuItem_2_Click);
             // 
             // ToolStripMenuItem_Options_2
@@ -266,20 +269,23 @@ namespace TypeWriterHostApp
             // 
             // toolStripMenuItem1
             // 
+            this.toolStripMenuItem1.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F);
+            this.toolStripMenuItem1.MaxLength = 5;
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
             this.toolStripMenuItem1.Size = new System.Drawing.Size(100, 23);
             this.toolStripMenuItem1.Text = "-2";
             this.toolStripMenuItem1.TextBoxTextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.toolStripMenuItem1.ToolTipText = "设置Y轴偏移值。只有当打印字体出现Y轴方向偏移时才需要进行设置。\r\n当连续字体打印出现向下偏移现象，尝试设置偏移值为负值，反之亦然。\r\n默认参数：-2";
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(157, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(177, 6);
             // 
             // toolStripMenuItem2
             // 
             this.toolStripMenuItem2.Name = "toolStripMenuItem2";
-            this.toolStripMenuItem2.Size = new System.Drawing.Size(160, 22);
+            this.toolStripMenuItem2.Size = new System.Drawing.Size(180, 22);
             this.toolStripMenuItem2.Text = "更新偏移值";
             this.toolStripMenuItem2.TextDirection = System.Windows.Forms.ToolStripTextDirection.Horizontal;
             this.toolStripMenuItem2.Click += new System.EventHandler(this.toolStripMenuItem2_Click);
@@ -296,27 +302,32 @@ namespace TypeWriterHostApp
             // 
             // toolStripTextBox1
             // 
+            this.toolStripTextBox1.Font = new System.Drawing.Font("Microsoft YaHei UI", 9F);
+            this.toolStripTextBox1.MaxLength = 1;
             this.toolStripTextBox1.Name = "toolStripTextBox1";
             this.toolStripTextBox1.Size = new System.Drawing.Size(100, 23);
             this.toolStripTextBox1.Text = "1";
             this.toolStripTextBox1.TextBoxTextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.toolStripTextBox1.ToolTipText = "设置打印缩放比例，暂只支持1、2倍放大。\r\n默认参数：1";
             // 
             // toolStripSeparator4
             // 
             this.toolStripSeparator4.Name = "toolStripSeparator4";
-            this.toolStripSeparator4.Size = new System.Drawing.Size(157, 6);
+            this.toolStripSeparator4.Size = new System.Drawing.Size(177, 6);
             // 
             // toolStripMenuItem3
             // 
             this.toolStripMenuItem3.Name = "toolStripMenuItem3";
-            this.toolStripMenuItem3.Size = new System.Drawing.Size(160, 22);
+            this.toolStripMenuItem3.Size = new System.Drawing.Size(180, 22);
             this.toolStripMenuItem3.Text = "更新缩放值";
+            this.toolStripMenuItem3.Click += new System.EventHandler(this.toolStripMenuItem3_Click);
             // 
             // ToolStripMenuItem_Options_4
             // 
             this.ToolStripMenuItem_Options_4.Name = "ToolStripMenuItem_Options_4";
             this.ToolStripMenuItem_Options_4.Size = new System.Drawing.Size(180, 22);
             this.ToolStripMenuItem_Options_4.Text = "Help";
+            this.ToolStripMenuItem_Options_4.Click += new System.EventHandler(this.ToolStripMenuItem_Options_4_Click);
             // 
             // toolStripSeparator5
             // 
@@ -326,8 +337,8 @@ namespace TypeWriterHostApp
             // toolStripLabel1
             // 
             this.toolStripLabel1.Name = "toolStripLabel1";
-            this.toolStripLabel1.Size = new System.Drawing.Size(58, 22);
-            this.toolStripLabel1.Text = "温度：61";
+            this.toolStripLabel1.Size = new System.Drawing.Size(55, 22);
+            this.toolStripLabel1.Text = "温度：∞";
             // 
             // textBox1
             // 

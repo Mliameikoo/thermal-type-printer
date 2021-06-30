@@ -71,7 +71,7 @@ int8_t printer_init(void)
 {
   int8_t retval = 0;
   // init param
-  printerInfo.scale = 1;
+  printerInfo.scale = 1; // 缩放值
   printerInfo.xpos_char_max_nums = PRINTER_ROW_WIDTH / 8 / printerInfo.scale;
   printerInfo.line_height = 16 * printerInfo.scale;
   printerInfo.height_offset = -2; // Y轴偏移
@@ -99,6 +99,11 @@ void motor_phases_update_loop(void)
   }
 }
 
+/**
+  * @brief  设置打印缩放比例
+  * @param  scale: 缩放倍数
+  * @retval 0:success, 1:非法参数
+  */
 int8_t printer_change_char_scale(uint8_t scale)
 {
   if (scale > 3)
@@ -144,12 +149,12 @@ int8_t printer_write_image_text(const struct imageTransmitInfoDef image)
   {
     for (uint8_t pos = 0; pos < 8; pos++)
     {
-      // if (pos + page * 8 >= image.height)
-      // {
-      //   break;
-      // }
+      if (pos + page * 8 >= image.height)
+      {
+        break;
+      }
       memset(single_line_pixel_write_buf, 0, sizeof(single_line_pixel_write_buf) / sizeof(uint8_t));
-      for (uint8_t i = 0; i < image.width; i++)
+      for (uint16_t i = 0; i < image.width; i++)
       {
         uint8_t val = image.buf.val[i + page * image.width];
         if ((val & (1 << pos)) != 0)

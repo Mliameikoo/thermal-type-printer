@@ -37,6 +37,9 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
+static uint8_t frame_head_list[4]; // head + length_h8bits + length_l8bits + cmd
+static uint8_t frame_tail_list[2]; // sum_check + tail
+
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -93,10 +96,10 @@
 /* Create buffer for reception and transmission           */
 /* It's up to user to redefine and/or remove those define */
 /** Received data over USB are stored in this buffer      */
-uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
+static uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 
 /** Data to send over USB CDC are stored in this buffer   */
-uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
+static uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
 
@@ -169,6 +172,8 @@ static int8_t CDC_Init_FS(void)
 
   hostComProtocol.head = 0xF5;
   hostComProtocol.tail = 0x5F;
+
+  usblinkMessage.is_cdc_init_ok = true; // cdc finished then send could be done, otherwise leds to hardfault
 
   return (USBD_OK);
   /* USER CODE END 3 */
@@ -438,15 +443,13 @@ uint8_t CDC_Transmit_FS(uint8_t *Buf, uint16_t Len)
   * @brief  send frame
   * @retval 0: success, -1: usb-tx-cache full
   */
-int8_t usb_send_frame(uint8_t cmd, uint16_t valid_length, uint8_t *valid_data_buf)
+int8_t usb_send_frame(const uint8_t cmd, const uint16_t valid_length, const uint8_t *valid_data_buf)
 {
   if (usblinkMessage.tx.length + FRAME_STRUCTURE_CODE_LENGTH + valid_length > APP_TX_DATA_SIZE)
   {
     // 缓存已满，无法发送
     return -1;
   }
-  uint8_t frame_head_list[4]; // head + length_h8bits + length_l8bits + cmd
-  uint8_t frame_tail_list[2]; // sum_check + tail
   frame_head_list[0] = FRAME_HEAD_CODE;
   frame_head_list[1] = valid_length >> 8;
   frame_head_list[2] = valid_length & 0xFF;
@@ -468,7 +471,7 @@ int8_t usb_send_frame(uint8_t cmd, uint16_t valid_length, uint8_t *valid_data_bu
   * @brief  usb-virtual-com's sendbuf with unblocking
   * @retval 0: success, 1: buf empty, -1: usb-tx-cache full
   */
-int8_t usb_send_string(uint16_t length, uint8_t *buf)
+int8_t usb_send_string(const uint16_t length, const uint8_t *buf)
 {
   if (length == 0)
   {
@@ -476,7 +479,7 @@ int8_t usb_send_string(uint16_t length, uint8_t *buf)
   }
   if (usblinkMessage.tx.length + length <= APP_TX_DATA_SIZE)
   {
-    memcpy((char *)(usblinkMessage.tx.info + usblinkMessage.tx.length), buf, length * sizeof(uint8_t));
+    memcpy((uint8_t *)(usblinkMessage.tx.info + usblinkMessage.tx.length), buf, length * sizeof(uint8_t));
     usblinkMessage.tx.length += length;
   }
   else
